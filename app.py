@@ -8,7 +8,9 @@ st.set_page_config(page_title="SmartStat Pro | AI", page_icon="🤖", layout="wi
 
 # --- 1. خوارزمية التنظيف والتشفير الذكي ---
 def encode_likert(df):
-    df_cleaned = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+    # تم التحديث هنا: استخدام map بدلاً من applymap ليتوافق مع أحدث إصدارات Pandas
+    df_cleaned = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+    
     likert_map = {
         "موافق بشدة": 5, "موافق": 4, "متوسط": 3, "محايد": 3, "غير موافق": 2, "غير موافق بشدة": 1, "لا أوافق": 2, "لا أوافق بشدة": 1,
         "دائما": 5, "دائماً": 5, "غالبا": 4, "غالباً": 4, "أحيانا": 3, "أحياناً": 3, "نادرا": 2, "نادراً": 2, "أبدا": 1, "أبداً": 1, "مطلقا": 1, "مطلقاً": 1,
@@ -53,6 +55,7 @@ if uploaded_file is not None:
         st.sidebar.title("⚙️ محرك الذكاء الاصطناعي")
         st.sidebar.success(f"تم قراءة {len(df)} استجابة.")
         st.sidebar.markdown("### 🤖 تصنيف المتغيرات الآلي")
+        
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الديموغرافية (الفئوية):", df_encoded.columns, default=cat_cols_auto)
         numeric_cols = st.sidebar.multiselect("🔢 متغيرات الاستبيان (الرقمية):", df_encoded.columns, default=[c for c in num_cols_auto if c not in categorical_cols])
         
