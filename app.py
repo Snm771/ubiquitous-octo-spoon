@@ -153,31 +153,45 @@ if uploaded_file is not None:
                 st.error("⚠️ تعذر إجراء الاختبار الإحصائي لهذه المتغيرات. (السبب: البيانات غير كافية أو التباين صفر).")
 
     # ==========================================
-    # التبويب الخامس: الارتباط (Spearman) مع الحماية
+    # التبويب الخامس: الارتباط المتعدد (Spearman Correlation Matrix)
     with tab5:
-        st.subheader("🔗 قياس الارتباط (Spearman Correlation)")
+        st.subheader("🔗 قياس الارتباط (مصفوفة الارتباط والخريطة الحرارية)")
+        st.markdown("اختر مجموعة من المتغيرات لمعرفة قوة واتجاه العلاقة بينها جميعاً في وقت واحد.")
         
         if len(numeric_cols) >= 2:
-            var1 = st.selectbox("المتغير الأول:", numeric_cols, key="corr1")
-            var2 = st.selectbox("المتغير الثاني:", numeric_cols, key="corr2")
+            # استخدام multiselect بدلاً من selectbox للسماح باختيار أكثر من متغير
+            selected_vars = st.multiselect(
+                "اختر المتغيرات (متغيرين أو أكثر):", 
+                numeric_cols, 
+                default=numeric_cols[:2] # يختار أول متغيرين كقيمة افتراضية
+            )
             
-            if var1 != var2:
+            if len(selected_vars) >= 2:
                 try:
-                    corr_res = pg.corr(df_encoded[var1], df_encoded[var2], method='spearman')
-                    st.dataframe(corr_res)
+                    # حساب مصفوفة الارتباط لجميع المتغيرات المختارة
+                    corr_matrix = df_encoded[selected_vars].corr(method='spearman')
                     
-                    r_val = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
-                    p_val = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else 1.0
+                    # عرض الجدول ملوناً
+                    st.markdown("### 📊 مصفوفة الارتباط (جدول)")
+                    # تلوين الجدول برمجياً لتسهيل القراءة (الأزرق طردي، الأحمر عكسي)
+                    st.dataframe(corr_matrix.style.background_gradient(cmap='RdBu', axis=None, vmin=-1, vmax=1).format("{:.2f}"), use_container_width=True)
                     
-                    direction = "طردية (كلما زاد الأول زاد الثاني)" if r_val > 0 else "عكسية (كلما زاد الأول نقص الثاني)"
+                    # رسم الخريطة الحرارية (Heatmap) الاحترافية
+                    st.markdown("### 🗺️ الخريطة الحرارية (Heatmap)")
+                    fig4 = px.imshow(
+                        corr_matrix, 
+                        text_auto=".2f", 
+                        aspect="auto",
+                        color_continuous_scale="RdBu",
+                        zmin=-1, zmax=1,
+                        title="مؤشر الألوان: الأزرق (طردي) | الأحمر (عكسي)"
+                    )
+                    st.plotly_chart(fig4, use_container_width=True)
                     
-                    st.markdown("### 📝 التفسير الآلي:")
-                    if p_val < 0.05:
-                        st.success(f"✅ توجد علاقة ارتباط ذات دلالة إحصائية. نوع العلاقة: **{direction}** بقوة ({r_val:.2f}).")
-                    else:
-                        st.warning("⚠️ لا توجد علاقة ارتباط حقيقية بين المتغيرين (العلاقة معدومة أو غير دالة).")
-                        
-                    fig4 = px.scatter(df_encoded, x=var1, y=var2, trendline="ols")
-                    st.plotly_chart(fig4)
-                except Exception:
+                    # التفسير الآلي
+                    st.info("💡 **كيف تقرأ هذه الخريطة؟** \n- الأرقام الموجبة (اللون الأزرق) تعني علاقة **طردية** (يزيدان معاً).\n- الأرقام السالبة (اللون الأحمر) تعني علاقة **عكسية** (أحدهما يزيد والآخر ينقص).\n- كلما اقترب الرقم من **1** أو **-1** (ألوان غامقة)، كانت العلاقة أقوى. الألوان الفاتحة (قريبة من الصفر) تعني عدم وجود ارتباط قوي.")
+                    
+                except Exception as e:
                     st.error("⚠️ تعذر قياس الارتباط لهذه المتغيرات (تأكد من عدم تطابق جميع الإجابات).")
+            else:
+                st.warning("يرجى اختيار متغيرين على الأقل من القائمة أعلاه لحساب الارتباط.")
