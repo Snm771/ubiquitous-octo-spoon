@@ -8,7 +8,9 @@ st.set_page_config(page_title="SmartStat Pro | AI", page_icon="🤖", layout="wi
 
 # --- 1. خوارزمية التنظيف والتشفير الذكي ---
 def encode_likert(df):
+    # استخدام map ليتوافق مع أحدث إصدارات Pandas
     df_cleaned = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+    
     likert_map = {
         "موافق بشدة": 5, "موافق": 4, "متوسط": 3, "محايد": 3, "غير موافق": 2, "غير موافق بشدة": 1, "لا أوافق": 2, "لا أوافق بشدة": 1,
         "دائما": 5, "دائماً": 5, "غالبا": 4, "غالباً": 4, "أحيانا": 3, "أحياناً": 3, "نادرا": 2, "نادراً": 2, "أبدا": 1, "أبداً": 1, "مطلقا": 1, "مطلقاً": 1,
@@ -105,6 +107,7 @@ if uploaded_file is not None:
                     cols[i % cols_per_row].plotly_chart(fig, use_container_width=True)
                 
                 st.markdown("---")
+                
                 st.markdown("### 2️⃣ التحليل المتقاطع العميق (Cross-Tabulation)")
                 if len(categorical_cols) >= 2:
                     c1, c2 = st.columns(2)
@@ -116,6 +119,7 @@ if uploaded_file is not None:
                                                  title=f"مقارنة أعداد ({cat1}) مقسمة حسب ({cat2})",
                                                  color_discrete_sequence=px.colors.qualitative.Set2)
                         st.plotly_chart(fig_cross, use_container_width=True)
+                        
                         st.markdown(f"**جدول التقاطع الرقمي:**")
                         cross_tab = pd.crosstab(df_encoded[cat1], df_encoded[cat2], margins=True, margins_name="المجموع الكلي")
                         st.dataframe(cross_tab, use_container_width=True)
@@ -156,19 +160,19 @@ if uploaded_file is not None:
                     st.error("⚠️ تعذر حساب الثبات، تأكد أن الإجابات ليست متطابقة تماماً.")
 
         # ==========================================
-        # التبويب الخامس: الفروق (التعديل الجديد - التوتال والخلاصة)
+        # التبويب الخامس: الفروق (التعديل المطلوب: التوتال فقط)
         with tab5:
-            st.subheader("⚖️ تقرير الفروق الإحصائية (لإجمالي الاستبيان)")
-            st.markdown("يقوم هذا القسم بجمع إجابات الاستبيان بالكامل (التوتال) وقياس الفروق بناءً على المتغير الذي تختاره.")
+            st.subheader("⚖️ تقرير الفروق الإحصائية (لإجمالي الاستبيان فقط)")
+            st.markdown("يقوم هذا القسم بجمع كافة إجابات الاستبيان للمشارك الواحد في **(درجة كلية / توتال)** ويحسب الفروق بناءً عليها.")
             
             if categorical_cols and numeric_cols:
-                g_col = st.selectbox("اختر المتغير الديموغرافي (للمقارنة بناءً عليه):", categorical_cols, key="g_main")
+                g_col = st.selectbox("اختر المتغير (مثال: النوع، العمر) للمقارنة بناءً عليه:", categorical_cols, key="g_main")
                 
-                # إنشاء عمود "الدرجة الكلية / التوتال" بجمع متوسط إجابات الشخص
+                # إنشاء عمود "الدرجة الكلية / التوتال" بجمع الإجابات أو أخذ متوسطها
                 c_data = df_encoded.copy()
-                c_data['⭐ التوتال (المتوسط العام)'] = c_data[numeric_cols].mean(axis=1)
+                c_data['⭐ الدرجة الكلية (توتال الاستبيان)'] = c_data[numeric_cols].mean(axis=1)
                 
-                clean_data = c_data[[g_col, '⭐ التوتال (المتوسط العام)']].dropna()
+                clean_data = c_data[[g_col, '⭐ الدرجة الكلية (توتال الاستبيان)']].dropna()
                 grps = clean_data[g_col].unique()
                 
                 if len(grps) < 2:
@@ -179,30 +183,30 @@ if uploaded_file is not None:
                     
                     try:
                         st.markdown("---")
-                        st.markdown(f"### 1️⃣ الإحصاء الوصفي (من الأعلى إجابة؟)")
+                        st.markdown(f"### 1️⃣ الإحصاء الوصفي (مقارنة متوسط الفئات)")
                         # حساب المتوسطات لكل فئة للتوتال
-                        means_df = clean_data.groupby(g_col)['⭐ التوتال (المتوسط العام)'].agg(['count', 'mean', 'std']).reset_index()
-                        means_df.columns = ['الفئة', 'العدد', 'المتوسط الحسابي الكلي', 'الانحراف المعياري']
-                        st.dataframe(means_df.style.format({"المتوسط الحسابي الكلي": "{:.3f}", "الانحراف المعياري": "{:.3f}"}), use_container_width=True)
+                        means_df = clean_data.groupby(g_col)['⭐ الدرجة الكلية (توتال الاستبيان)'].agg(['count', 'mean', 'std']).reset_index()
+                        means_df.columns = ['الفئة', 'العدد', 'المتوسط الحسابي للدرجة الكلية', 'الانحراف المعياري']
+                        st.dataframe(means_df.style.format({"المتوسط الحسابي للدرجة الكلية": "{:.3f}", "الانحراف المعياري": "{:.3f}"}), use_container_width=True)
 
                         st.markdown(f"### 2️⃣ الخلاصة النهائية لاختبار ({test_name})")
                         # إجراء الاختبار للتوتال فقط
                         if test_name == "T-test":
-                            g1 = clean_data[clean_data[g_col] == grps[0]]['⭐ التوتال (المتوسط العام)']
-                            g2 = clean_data[clean_data[g_col] == grps[1]]['⭐ التوتال (المتوسط العام)']
+                            g1 = clean_data[clean_data[g_col] == grps[0]]['⭐ الدرجة الكلية (توتال الاستبيان)']
+                            g2 = clean_data[clean_data[g_col] == grps[1]]['⭐ الدرجة الكلية (توتال الاستبيان)']
                             res = pg.ttest(g1, g2)
                             stat_val = res['T'].values[0]
                             pval = res['p-val'].values[0]
                         else: # ANOVA
-                            res = pg.anova(data=clean_data, dv='⭐ التوتال (المتوسط العام)', between=g_col)
+                            res = pg.anova(data=clean_data, dv='⭐ الدرجة الكلية (توتال الاستبيان)', between=g_col)
                             stat_val = res['F'].values[0]
                             pval = res['p-unc'].values[0]
                             
-                        sig = "توجد فروق دالة" if pval < 0.05 else "لا توجد فروق دالة"
+                        sig = "دالة إحصائياً" if pval < 0.05 else "غير دالة"
                         
-                        # جدول النتيجة النهائي
+                        # جدول النتيجة النهائي للخلاصة
                         final_res = pd.DataFrame([{
-                            "المتغير للقياس": g_col,
+                            "المتغير الذي تم اختياره": g_col,
                             "الاختبار المستخدم": test_name,
                             f"قيمة ({test_stat_name})": round(stat_val, 3),
                             "مستوى الدلالة (Sig)": round(pval, 3),
@@ -210,19 +214,19 @@ if uploaded_file is not None:
                         }])
                         
                         def color_sig(val):
-                            if val == 'توجد فروق دالة': return 'color: #2e7d32; font-weight: bold'
-                            elif val == 'لا توجد فروق دالة': return 'color: #c62828; font-weight: bold'
+                            if val == 'دالة إحصائياً': return 'color: #2e7d32; font-weight: bold'
+                            elif val == 'غير دالة': return 'color: #c62828; font-weight: bold'
                             return ''
                             
                         st.dataframe(final_res.style.map(color_sig, subset=['النتيجة']), use_container_width=True)
                         
                         if pval < 0.05:
-                            st.success(f"💡 الخلاصة: يوجد اختلاف حقيقي إحصائياً في إجمالي إجابات الاستبيان بين فئات ({g_col}). راجع جدول المتوسطات أعلاه لمعرفة الفئة صاحبة الدرجة الأعلى.")
+                            st.success(f"💡 الخلاصة: يوجد اختلاف حقيقي إحصائياً في إجمالي إجابات الاستبيان بين فئات ({g_col}).")
                         else:
-                            st.warning(f"💡 الخلاصة: إجابات الاستبيان متقاربة جداً، ولا يوجد فرق حقيقي يُذكر بين فئات ({g_col}).")
+                            st.warning(f"💡 الخلاصة: إجابات الاستبيان الكلية متقاربة جداً، ولا يوجد فرق حقيقي يُذكر بين فئات ({g_col}).")
                             
                         # رسم بياني للصندوق يوضح توزيع التوتال
-                        fig = px.box(clean_data, x=g_col, y='⭐ التوتال (المتوسط العام)', color=g_col, title=f"مقارنة إجمالي الاستبيان حسب ({g_col})")
+                        fig = px.box(clean_data, x=g_col, y='⭐ الدرجة الكلية (توتال الاستبيان)', color=g_col, title=f"مقارنة إجمالي الاستبيان حسب ({g_col})")
                         st.plotly_chart(fig, use_container_width=True)
                         
                     except Exception as e:
