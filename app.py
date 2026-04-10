@@ -61,15 +61,15 @@ if uploaded_file is not None:
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات المستقلة (الديموغرافية):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # بناء المحور الأول (مثلاً: المشكلات السلوكية)
+        # بناء المحور الأول
         axis1_name = st.sidebar.text_input("اسم المحور الأول:", "المحور الأول")
         axis1_cols = st.sidebar.multiselect(f"أسئلة {axis1_name}:", all_questions, default=all_questions[:len(all_questions)//2] if all_questions else [])
         
-        # بناء المحور الثاني (مثلاً: المناخ الأسري)
+        # بناء المحور الثاني
         axis2_name = st.sidebar.text_input("اسم المحور الثاني:", "المحور الثاني")
         axis2_cols = st.sidebar.multiselect(f"أسئلة {axis2_name}:", all_questions, default=[c for c in all_questions if c not in axis1_cols])
 
-        # --- حساب متوسطات المحاور (هذا ما فعله الخبير بالضبط) ---
+        # --- حساب متوسطات المحاور ---
         analysis_cols = []
         if axis1_cols:
             df_encoded[axis1_name] = df_encoded[axis1_cols].mean(axis=1)
@@ -78,7 +78,7 @@ if uploaded_file is not None:
             df_encoded[axis2_name] = df_encoded[axis2_cols].mean(axis=1)
             analysis_cols.append(axis2_name)
             
-        # المجموع الكلي للاستبيان (كخيار إضافي)
+        # المجموع الكلي للاستبيان
         if axis1_cols and axis2_cols:
             df_encoded['متوسط الاستبيان الكلي'] = df_encoded[axis1_cols + axis2_cols].mean(axis=1)
             analysis_cols.append('متوسط الاستبيان الكلي')
@@ -98,7 +98,7 @@ if uploaded_file is not None:
             ])
 
             # ==========================================
-            # التبويب الأول: عينة الدراسة (مطابق لملف الخبير)
+            # التبويب الأول: عينة الدراسة
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
@@ -111,18 +111,28 @@ if uploaded_file is not None:
                     with col2: st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3), use_container_width=True)
 
             # ==========================================
-            # التبويب الثاني: الإحصاء الوصفي للمحاور
+            # التبويب الثاني: الإحصاء الوصفي الشامل (المحاور + الفقرات)
             with tab2:
                 st.subheader("📊 الإحصاء الوصفي (المتوسطات والانحرافات المعيارية)")
                 
-                # إحصاء عام للمحاور
+                # 1. إحصاء عام للمحاور
                 st.markdown("### 1️⃣ الإحصاء العام للمحاور")
                 desc_df = df_encoded[analysis_cols].describe().T
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط الحسابي', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط الحسابي', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
-                # إحصاء مقارن حسب الفئات (مطابق لملف المشكلات السلوكية - الجنس)
-                st.markdown("### 2️⃣ الإحصاء المقارن (حسب الفئات)")
+                # 2. الإحصاء التفصيلي لكل فقرة (الميزة الجديدة المضافة بناءً على طلبك)
+                st.markdown("### 2️⃣ الإحصاء التفصيلي لجميع فقرات (أسئلة) الاستبيان")
+                st.markdown("يعرض هذا الجدول المتوسط والانحراف المعياري لكل سؤال لمعرفة الأسئلة الأعلى والأدنى استجابة.")
+                all_items = axis1_cols + axis2_cols
+                if all_items:
+                    items_desc = df_encoded[all_items].describe().T
+                    items_desc = items_desc.rename(columns={'count': 'العدد', 'mean': 'المتوسط الحسابي', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
+                    # تلوين المتوسطات لتسهيل القراءة بالعين
+                    st.dataframe(items_desc[['العدد', 'المتوسط الحسابي', 'الانحراف المعياري', 'الأدنى', 'الأقصى']].style.background_gradient(subset=['المتوسط الحسابي'], cmap='Blues'), use_container_width=True)
+
+                # 3. إحصاء مقارن حسب الفئات
+                st.markdown("### 3️⃣ الإحصاء المقارن (حسب الفئات)")
                 if categorical_cols:
                     comp_cat = st.selectbox("قسم النتائج بناءً على:", categorical_cols)
                     comp_axis = st.selectbox("اختر المحور للمقارنة:", analysis_cols)
@@ -132,7 +142,7 @@ if uploaded_file is not None:
                     st.plotly_chart(px.bar(grouped_desc, x=comp_cat, y='المتوسط الحسابي', color=comp_cat, text_auto='.2f'), use_container_width=True)
 
             # ==========================================
-            # التبويب الثالث: الثبات (ألفا كرونباخ) - مطابق لملف الخبير
+            # التبويب الثالث: الثبات (ألفا كرونباخ)
             with tab3:
                 st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
                 st.markdown("يتم حساب الثبات لكل محور على حدة، وللاستبيان ككل.")
@@ -156,7 +166,7 @@ if uploaded_file is not None:
                     else: st.warning("⚠️ الثبات يحتاج للمراجعة.")
 
             # ==========================================
-            # التبويب الرابع: اختبار الفروق (T-test & ANOVA)
+            # التبويب الرابع: اختبار الفروق
             with tab4:
                 st.subheader("⚖️ دلالة الفروق (T-test و ANOVA)")
                 if categorical_cols and analysis_cols:
@@ -186,7 +196,7 @@ if uploaded_file is not None:
                     except: st.error("البيانات غير كافية لإجراء الاختبار.")
 
             # ==========================================
-            # التبويب الخامس: الارتباط (مطابق لملف الخبير)
+            # التبويب الخامس: الارتباط
             with tab5:
                 st.subheader("🔗 قياس الارتباط بين المحاور (Pearson Correlation)")
                 if len(analysis_cols) >= 2:
