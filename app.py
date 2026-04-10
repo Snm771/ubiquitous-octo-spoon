@@ -321,7 +321,7 @@ if uploaded_file is not None:
                                 'text-align': 'center',
                                 'background-color': '#f0f8ff'
                             }).highlight_between(
-                                left=0, right=0.05, subset=['p-value'], color='#90EE90"
+                                left=0, right=0.05, subset=['p-value'], color='#90EE90'
                             ),
                             use_container_width=True,
                             height=600
