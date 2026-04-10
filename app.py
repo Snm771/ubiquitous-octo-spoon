@@ -24,7 +24,7 @@ def encode_likert(df):
             except ValueError: pass 
     return df_cleaned
 
-# --- 2. التصنيف الدلالي ---
+# --- 2. التصنيف الدلالي المطور ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل', 'تعليم', 'مهنة', 'زيارة', 'مستوى']
@@ -33,7 +33,6 @@ def smart_classify_columns(df):
         if col.lower() in ['timestamp', 'unnamed: 0']: continue
         words_count = len(str(col).split())
         is_demo = any(keyword in str(col).lower() for keyword in demo_keywords) and words_count <= 4
-        
         if is_demo: categorical_cols.append(col)
         else:
             converted = pd.to_numeric(df[col], errors='coerce')
@@ -45,7 +44,7 @@ def smart_classify_columns(df):
 # واجهة المستخدم
 # ==========================================
 st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
-st.markdown("تم تحديث النظام ليدعم أي عدد من المحاور والأبعاد. ارفع الملف، حدد عدد المحاور، ودع النظام يتكفل بالباقي.")
+st.markdown("يرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية جاهز للنسخ في الأبحاث العلمية.")
 st.markdown("---")
 
 uploaded_file = st.file_uploader("قم برفع ملف البيانات الخام (CSV أو Excel)", type=["csv", "xlsx"])
@@ -75,11 +74,9 @@ if uploaded_file is not None:
         for i in range(int(num_dims)):
             st.sidebar.markdown(f"---")
             dim_name = st.sidebar.text_input(f"اسم المحور {i+1}:", f"المحور {i+1}", key=f"name_{i}")
-            
             start_idx = i * chunk_size
             end_idx = start_idx + chunk_size if i < int(num_dims) - 1 else len(all_questions)
             default_cols = all_questions[start_idx:end_idx] if all_questions else []
-            
             dim_cols = st.sidebar.multiselect(f"أسئلة {dim_name}:", all_questions, default=default_cols, key=f"cols_{i}")
             
             if dim_cols:
@@ -156,8 +153,7 @@ if uploaded_file is not None:
                 
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
-                    if 'a_total' in locals() and a_total >= 0.60: st.success("✅ أداة الدراسة تتمتع بثبات مقبول علمياً.")
-                    else: st.warning("⚠️ بعض المحاور قد تحتاج لمراجعة ثباتها.")
+                    st.info("📝 **الصياغة الأكاديمية:** يشير معامل ألفا كرونباخ إلى مستوى الاتساق الداخلي لفقرات الاستبيان. تُعتبر القيمة التي تتجاوز (0.60) مقبولة لأغراض البحث العلمي، وكلما اقتربت القيمة من (1.0) دلّ ذلك على ثبات وموثوقية عالية جداً لأداة الدراسة.")
 
             # ==========================================
             with tab4:
@@ -169,7 +165,6 @@ if uploaded_file is not None:
                     temp_df = df_encoded[[g_col, t_col]].copy()
                     temp_df[t_col] = pd.to_numeric(temp_df[t_col], errors='coerce')
                     res_data = temp_df.dropna()
-                    
                     grps = res_data[g_col].unique()
                     
                     if len(grps) < 2:
@@ -177,24 +172,27 @@ if uploaded_file is not None:
                     else:
                         try:
                             if len(grps) == 2:
-                                st.markdown(f"**نوع الاختبار:** `T-test`")
+                                st.markdown(f"**نوع الاختبار:** `T-test لعينتين مستقلتين`")
                                 g1 = res_data[res_data[g_col]==grps[0]][t_col].astype(float).values
                                 g2 = res_data[res_data[g_col]==grps[1]][t_col].astype(float).values
                                 
                                 if len(g1) < 2 or len(g2) < 2:
-                                    st.warning("⚠️ عدد الأفراد قليل جداً ولا يمكن إجراء الاختبار.")
+                                    st.warning("⚠️ إحدى المجموعات عدد أفرادها قليل جداً (أقل من شخصين) ولا يمكن إجراء الاختبار.")
                                 else:
                                     res = pg.ttest(g1, g2)
                                     st.dataframe(res)
-                                    
-                                    # السحب الآمن لـ p-val لمنع تعطل البرنامج
                                     pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
                                     
-                                    if pval < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
-                                    else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                                    st.markdown("### 📝 التفسير العلمي للنتيجة:")
+                                    if pval < 0.05: 
+                                        st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
+                                        st.info(f"**الصياغة الأكاديمية:** تشير النتائج إلى وجود فروق ذات دلالة إحصائية عند مستوى الدلالة (0.05) بين فئات ({g_col}) في محور ({t_col})، حيث بلغت قيمة الدلالة ($p = {pval:.3f}$) وهي أصغر من (0.05). وهذا يعني أن الاختلاف الملاحظ في المتوسطات هو اختلاف حقيقي يعود لتأثير الفئة المستقلة وليس وليد الصدفة.")
+                                    else: 
+                                        st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
+                                        st.info(f"**الصياغة الأكاديمية:** أشارت نتائج اختبار (T-test) إلى عدم وجود فروق ذات دلالة إحصائية عند مستوى الدلالة (0.05) بين فئات ({g_col}) في محور ({t_col})، حيث بلغت قيمة الدلالة ($p = {pval:.3f}$) وهي أكبر من (0.05). هذا يعني أن الاختلافات الظاهرية في المتوسطات ترجع إلى الصدفة أو أخطاء المعاينة العشوائية، ولا يمكن تعميمها على مجتمع الدراسة، مما يشير إلى تقارب استجابات المجموعتين.")
                                     
                             elif len(grps) > 2:
-                                st.markdown(f"**نوع الاختبار:** `ANOVA`")
+                                st.markdown(f"**نوع الاختبار:** `تحليل التباين الأحادي (ANOVA)`")
                                 counts = res_data[g_col].value_counts()
                                 valid_grps = counts[counts >= 2].index
                                 if len(valid_grps) < 2:
@@ -203,16 +201,19 @@ if uploaded_file is not None:
                                     clean_anova = res_data[res_data[g_col].isin(valid_grps)]
                                     res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
                                     st.dataframe(res)
-                                    
-                                    # السحب الآمن لـ p-unc
                                     pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
                                     
-                                    if pval < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
-                                    else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                                    st.markdown("### 📝 التفسير العلمي للنتيجة:")
+                                    if pval < 0.05: 
+                                        st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
+                                        st.info(f"**الصياغة الأكاديمية:** أظهرت نتائج تحليل التباين (ANOVA) وجود فروق ذات دلالة إحصائية عند مستوى الدلالة (0.05) بين فئات ({g_col}) في محور ({t_col})، حيث بلغت الدلالة ($p = {pval:.3f}$). وهذا يعكس وجود تباين حقيقي في الاستجابات يختلف باختلاف الفئات المدروسة.")
+                                    else: 
+                                        st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
+                                        st.info(f"**الصياغة الأكاديمية:** بينت نتائج تحليل التباين (ANOVA) عدم وجود فروق ذات دلالة إحصائية عند مستوى (0.05) بين فئات ({g_col}) في محور ({t_col})، حيث بلغت الدلالة ($p = {pval:.3f}$) وهي أكبر من (0.05). مما يشير إلى تجانس وتوافق في آراء العينة بغض النظر عن انتمائهم الفئوي.")
                                     
                             st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
                         except Exception as e: 
-                            st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات في هذا المتغير: {e}")
+                            st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات: {e}")
 
             # ==========================================
             with tab5:
@@ -227,12 +228,19 @@ if uploaded_file is not None:
                                 corr_res = pg.corr(clean_corr[v1], clean_corr[v2], method='pearson')
                                 st.dataframe(corr_res[['n', 'r', 'p-val'] if 'p-val' in corr_res.columns else corr_res.columns])
                                 
-                                # السحب الآمن
                                 pval = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else (corr_res['p-value'].values[0] if 'p-value' in corr_res.columns else 1.0)
                                 rval = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
                                 
-                                if pval < 0.05: st.success(f"✅ توجد علاقة ارتباط دالة إحصائياً. بقوة: {rval:.3f}")
-                                else: st.warning("لا توجد علاقة ارتباط دالة.")
+                                st.markdown("### 📝 التفسير العلمي للنتيجة:")
+                                if pval < 0.05: 
+                                    direction = "طردية (إيجابية)" if rval > 0 else "عكسية (سلبية)"
+                                    strength = "قوية" if abs(rval) > 0.7 else ("متوسطة" if abs(rval) > 0.4 else "ضعيفة")
+                                    st.success(f"✅ **توجد علاقة ارتباط دالة إحصائياً.**")
+                                    st.info(f"**الصياغة الأكاديمية:** كشفت نتائج معامل ارتباط بيرسون عن وجود علاقة ارتباط {direction} و{strength} ذات دلالة إحصائية عند مستوى (0.05) بين ({v1}) و ({v2})، حيث بلغت قيمة معامل الارتباط ($r = {rval:.3f}$) بقيمة احتمالية ($p = {pval:.3f}$). مما يعني أنه كلما ارتفعت التقييمات في المتغير الأول، صاحَبَها [ارتفاع/انخفاض] ذو دلالة في المتغير الثاني.")
+                                else: 
+                                    st.warning("⚠️ **لا توجد علاقة ارتباط دالة إحصائياً.**")
+                                    st.info(f"**الصياغة الأكاديمية:** أظهرت النتائج عدم وجود علاقة ارتباط ذات دلالة إحصائية بين ({v1}) و ({v2})، حيث بلغت الدلالة ($p = {pval:.3f}$) وهي أعلى من (0.05). مما يشير إلى أن التغير في أحد المتغيرين لا يرتبط بشكل خطي يعتد به إحصائياً مع التغير في المتغير الآخر.")
+                                    
                                 st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
                             else:
                                 st.warning("بيانات غير كافية للارتباط.")
@@ -242,8 +250,8 @@ if uploaded_file is not None:
             with tab6:
                 st.subheader("📈 تحليل الانحدار (التنبؤ والتأثير)")
                 if len(analysis_cols) >= 2:
-                    dep_var = st.selectbox("المتغير التابع (Y):", analysis_cols, key='reg_y')
-                    indep_vars = st.multiselect("المتغيرات المستقلة (X):", [c for c in analysis_cols if c != dep_var], default=[c for c in analysis_cols if c != dep_var][:1], key='reg_x')
+                    dep_var = st.selectbox("المتغير التابع (Y / النتيجة):", analysis_cols, key='reg_y')
+                    indep_vars = st.multiselect("المتغيرات المستقلة (X / المؤثرات):", [c for c in analysis_cols if c != dep_var], default=[c for c in analysis_cols if c != dep_var][:1], key='reg_x')
                     if indep_vars:
                         reg_data = df_encoded[[dep_var] + indep_vars].apply(pd.to_numeric, errors='coerce').dropna()
                         if len(reg_data) > 2:
@@ -251,7 +259,9 @@ if uploaded_file is not None:
                                 lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
                                 st.dataframe(lm)
                                 r2 = lm['r2'].values[0] if 'r2' in lm.columns else 0
-                                st.info(f"💡 قوة النموذج (R²): المحاور المستقلة تُفسر نسبة **({float(r2)*100:.1f}%)** من التغير في ({dep_var}).")
+                                
+                                st.markdown("### 📝 التفسير العلمي للنتيجة:")
+                                st.info(f"**الصياغة الأكاديمية:** يوضح نموذج الانحدار الخطي أن المتغيرات المستقلة المدروسة قادرة مجتمعة على تفسير ما مقداره **({float(r2)*100:.1f}%)** من التباين الحاصل في المتغير التابع ({dep_var})، وذلك استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$). وتُعزى النسبة المتبقية إلى عوامل أخرى غير مشمولة في النموذج أو إلى الأخطاء العشوائية.")
                             except: st.error("حدث خطأ في الانحدار.")
                         else:
                             st.warning("عينة غير كافية للانحدار.")
