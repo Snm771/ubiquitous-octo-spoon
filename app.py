@@ -6,7 +6,7 @@ import numpy as np
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
-# --- 1. دالة التشفير الذكي (شاملة لكل الملفات) ---
+# --- 1. دالة التشفير الذكي ---
 def encode_likert(df):
     likert_map = {
         "موافق بشدة": 5, "موافق": 4, "متوسط": 3, "محايد": 3, "غير موافق": 2, "غير موافق بشدة": 1, "لا أوافق": 2, "لا أوافق بشدة": 1,
@@ -24,14 +24,17 @@ def encode_likert(df):
             except ValueError: pass 
     return df_cleaned
 
-# --- 2. التصنيف الدلالي المطور ---
+# --- 2. التصنيف الدلالي المطور (مع فلتر الطول لمنع ضياع الأسئلة) ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل', 'تعليم', 'مهنة', 'زيارة', 'مستوى']
     
     for col in df.columns:
         if col.lower() in ['timestamp', 'unnamed: 0']: continue
-        is_demo = any(keyword in col.lower() for keyword in demo_keywords)
+        
+        # فلتر الطول: البيانات الشخصية غالباً تكون أقل من 5 كلمات
+        words_count = len(str(col).split())
+        is_demo = any(keyword in str(col).lower() for keyword in demo_keywords) and words_count <= 4
         
         if is_demo:
             categorical_cols.append(col)
@@ -67,21 +70,20 @@ if uploaded_file is not None:
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # --- الميزة الجديدة: محرك المحاور الديناميكي ---
-        num_dims = st.sidebar.number_input("🔢 كم عدد المحاور/الأبعاد في دراستك؟", min_value=1, max_value=15, value=2)
+        # --- محرك المحاور الديناميكي ---
+        num_dims = st.sidebar.number_input("🔢 كم عدد المحاور/الأبعاد في دراستك؟", min_value=1, max_value=15, value=6)
         
         dimensions_dict = {}
         analysis_cols = []
         active_questions = []
         
-        # توزيع مبدئي ذكي للأسئلة
+        # توزيع مبدئي للأسئلة
         chunk_size = max(1, len(all_questions) // int(num_dims)) if all_questions else 1
         
         for i in range(int(num_dims)):
             st.sidebar.markdown(f"---")
             dim_name = st.sidebar.text_input(f"اسم المحور {i+1}:", f"المحور {i+1}", key=f"name_{i}")
             
-            # اقتراح الأسئلة تلقائياً لتقليل الجهد
             start_idx = i * chunk_size
             end_idx = start_idx + chunk_size if i < int(num_dims) - 1 else len(all_questions)
             default_cols = all_questions[start_idx:end_idx] if all_questions else []
@@ -94,10 +96,10 @@ if uploaded_file is not None:
                 analysis_cols.append(dim_name)
                 active_questions.extend(dim_cols)
                 
-        # إزالة التكرار من الأسئلة النشطة
+        # إزالة التكرار
         active_questions = list(dict.fromkeys(active_questions))
 
-        # المجموع الكلي للاستبيان
+        # المجموع الكلي
         if len(active_questions) > 0:
             df_encoded['الاستبيان ككل (المتوسط العام)'] = df_encoded[active_questions].mean(axis=1)
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
@@ -115,7 +117,6 @@ if uploaded_file is not None:
             ])
 
             # ==========================================
-            # التبويب الأول: عينة الدراسة
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
@@ -128,24 +129,19 @@ if uploaded_file is not None:
                     with col2: st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3), use_container_width=True)
 
             # ==========================================
-            # التبويب الثاني: الإحصاء الوصفي الشامل
             with tab2:
                 st.subheader("📊 الإحصاء الوصفي (المتوسطات والانحرافات المعيارية)")
-                
-                # 1. إحصاء عام للمحاور
                 st.markdown("### 1️⃣ الإحصاء العام للمحاور والأبعاد")
                 desc_df = df_encoded[analysis_cols].describe().T
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
-                # 2. الإحصاء التفصيلي للفقرات
                 st.markdown(f"### 2️⃣ الإحصاء التفصيلي لجميع فقرات الاستبيان (العدد: {len(active_questions)})")
                 if active_questions:
                     items_desc = df_encoded[active_questions].describe().T
                     items_desc = items_desc.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                     st.dataframe(items_desc[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']].style.background_gradient(subset=['المتوسط'], cmap='Blues'), use_container_width=True)
 
-                # 3. المقارنة الوصفية
                 st.markdown("### 3️⃣ المقارنة الوصفية بين الفئات")
                 if categorical_cols:
                     comp_cat = st.selectbox("قسم النتائج بناءً على:", categorical_cols)
@@ -155,18 +151,14 @@ if uploaded_file is not None:
                     st.dataframe(grouped_desc.style.highlight_max(subset=['المتوسط الحسابي'], color='#d4edda'), use_container_width=True)
 
             # ==========================================
-            # التبويب الثالث: الثبات
             with tab3:
                 st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
                 alpha_results = []
-                
-                # حساب الثبات لكل محور ديناميكياً
                 for dim_name, cols in dimensions_dict.items():
                     if len(cols) > 1:
                         a_val = pg.cronbach_alpha(data=df_encoded[cols].dropna())[0]
                         alpha_results.append({"المحور / البعد": dim_name, "عدد العبارات": len(cols), "معامل ألفا": round(a_val, 3)})
                 
-                # الثبات للاستبيان ككل
                 if len(active_questions) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
                     alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
@@ -177,13 +169,11 @@ if uploaded_file is not None:
                     else: st.warning("⚠️ بعض المحاور قد تحتاج لمراجعة ثباتها.")
 
             # ==========================================
-            # التبويب الرابع: الفروق
             with tab4:
                 st.subheader("⚖️ دلالة الفروق (T-test و ANOVA)")
                 if categorical_cols and analysis_cols:
                     g_col = st.selectbox("المتغير المستقل (ديموغرافي):", categorical_cols, key="g_f")
                     t_col = st.selectbox("المتغير التابع (المحور المراد اختباره):", analysis_cols, index=len(analysis_cols)-1, key="t_f")
-                    
                     res_data = df_encoded[[g_col, t_col]].dropna()
                     grps = res_data[g_col].unique()
                     
@@ -204,7 +194,6 @@ if uploaded_file is not None:
                     except: st.error("البيانات غير كافية لإجراء الاختبار.")
 
             # ==========================================
-            # التبويب الخامس: الارتباط
             with tab5:
                 st.subheader("🔗 قياس الارتباط بين المحاور (Pearson)")
                 if len(analysis_cols) >= 2:
@@ -220,7 +209,6 @@ if uploaded_file is not None:
                         except: st.error("تعذر حساب الارتباط.")
 
             # ==========================================
-            # التبويب السادس: الانحدار
             with tab6:
                 st.subheader("📈 تحليل الانحدار (التنبؤ والتأثير)")
                 if len(analysis_cols) >= 2:
