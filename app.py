@@ -3,9 +3,9 @@ import pandas as pd
 import plotly.express as px
 import pingouin as pg
 
-st.set_page_config(page_title="SmartStat Pro | النسخة الأكاديمية", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="SmartStat Pro | الأكاديمية", page_icon="🎓", layout="wide")
 
-# --- 1. دالة التشفير الذكي (القاموس الشامل) ---
+# --- 1. دالة التشفير الذكي ---
 def encode_likert(df):
     likert_map = {
         "موافق بشدة": 5, "موافق": 4, "متوسط": 3, "محايد": 3, "غير موافق": 2, "غير موافق بشدة": 1, "لا أوافق": 2, "لا أوافق بشدة": 1,
@@ -14,27 +14,35 @@ def encode_likert(df):
         "بدرجة كبيرة جدا": 5, "بدرجة كبيرة جداً": 5, "بدرجة كبيرة": 4, "بدرجة متوسطة": 3, "بدرجة قليلة": 2, "بدرجة ضعيفة": 2, "بدرجة قليلة جدا": 1, "بدرجة ضعيفة جدا": 1,
         "نعم": 2, "لا": 1
     }
+    
     df_cleaned = df.copy()
     df_cleaned = df_cleaned.map(lambda x: x.strip() if isinstance(x, str) else x)
     df_cleaned = df_cleaned.replace(likert_map)
+    
     for col in df_cleaned.columns:
         if col != 'Timestamp':
             try: df_cleaned[col] = pd.to_numeric(df_cleaned[col])
             except ValueError: pass 
     return df_cleaned
 
-# --- 2. خوارزمية التصنيف الدلالي للتمييز بين الديموغرافيا والأسئلة ---
+# --- 2. خوارزمية التصنيف الدلالي ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل']
+    
     for col in df.columns:
         if col.lower() == 'timestamp': continue
         is_demo = any(keyword in col for keyword in demo_keywords)
-        if is_demo: categorical_cols.append(col)
+        
+        if is_demo:
+            categorical_cols.append(col)
         else:
             converted = pd.to_numeric(df[col], errors='coerce')
-            if converted.notnull().sum() > (len(df) * 0.5): numeric_cols.append(col)
-            elif df[col].nunique() <= 15: categorical_cols.append(col)
+            if converted.notnull().sum() > (len(df) * 0.5):
+                numeric_cols.append(col)
+            elif df[col].nunique() <= 15:
+                categorical_cols.append(col)
+                
     return categorical_cols, numeric_cols
 
 # ==========================================
@@ -54,100 +62,129 @@ if uploaded_file is not None:
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
         st.sidebar.title("⚙️ إعدادات المتغيرات")
-        categorical_cols = st.sidebar.multiselect("👥 المتغيرات الديموغرافية (للفصل والمقارنة):", df_encoded.columns, default=cat_cols_auto)
+        categorical_cols = st.sidebar.multiselect("👥 المتغيرات الديموغرافية (التي تُستخدم للمقارنة):", df_encoded.columns, default=cat_cols_auto)
+        
+        # الأسئلة الأساسية للاستبيان
         base_numeric_cols = st.sidebar.multiselect("🔢 أسئلة الاستبيان الأساسية:", df_encoded.columns, default=[c for c in num_cols_auto if c not in categorical_cols])
 
-        # --- حساب المجموع الكلي (التوتال النهائي) ---
+        # --- السحر الأكاديمي: حساب المجموع الكلي تلقائياً ---
         analysis_numeric_cols = []
         if base_numeric_cols:
             df_encoded['المجموع الكلي للاستبيان'] = df_encoded[base_numeric_cols].sum(axis=1)
+            # إضافة المجموع الكلي كأول خيار في القوائم ليصبح هو الافتراضي!
             analysis_numeric_cols = ['المجموع الكلي للاستبيان'] + base_numeric_cols
+            
             for col in analysis_numeric_cols:
                 df_encoded[col] = pd.to_numeric(df_encoded[col], errors='coerce')
 
-        st.success("✅ تم قراءة البيانات وتجهيز المجموع الكلي للفصل بين المتغيرات!")
+        st.success("✅ تم قراءة البيانات وحساب **المجموع الكلي للاستبيان** بنجاح!")
         
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "👥 الديموغرافيا المتقاطعة", 
-            "📊 الإحصاء الوصفي (المقارن)", 
+            "📊 الإحصاء الوصفي", 
             "🧪 الثبات (ألفا)", 
             "⚖️ الفروق وحجم الأثر", 
             "🔗 الارتباط المزدوج",
-            "📈 الانحدار"
+            "📈 الانحدار",
+            "📊 مقارنة الذكور/الإناث والعمر"
         ])
 
         # ==========================================
-        # التبويب الأول: الديموغرافيا
+        # التبويب الأول: الديموغرافيا المتقاطعة
         with tab1:
-            st.subheader("👥 تحليل التوزيع للفئات (مثل الجنس والعمر)")
+            st.subheader("👥 لوحة قيادة البيانات الشخصية (التوزيع والتقاطع)")
             if categorical_cols:
-                demo_col = st.selectbox("اختر المتغير لعرض توزيعه:", categorical_cols, key="demo_view")
+                st.markdown("### 1️⃣ التوزيع العام")
+                demo_col = st.selectbox("اختر المتغير لعرض توزيعه:", categorical_cols)
                 counts = df_encoded[demo_col].value_counts()
                 percentages = df_encoded[demo_col].value_counts(normalize=True) * 100
                 demo_df = pd.DataFrame({'العدد': counts, 'النسبة (%)': percentages.round(2)})
+                
                 col1, col2 = st.columns(2)
                 with col1: st.dataframe(demo_df, use_container_width=True)
                 with col2: st.plotly_chart(px.pie(demo_df, values='العدد', names=demo_df.index, hole=0.3), use_container_width=True)
-            else: st.warning("لا توجد بيانات شخصية.")
+                
+                st.markdown("---")
+                st.markdown("### 2️⃣ التحليل المتقاطع (Cross-Tabulation)")
+                if len(categorical_cols) >= 2:
+                    c1, c2 = st.columns(2)
+                    with c1: cat1 = st.selectbox("المتغير الأساسي:", categorical_cols, key="cross1")
+                    with c2: cat2 = st.selectbox("مقسم حسب:", categorical_cols, index=1 if len(categorical_cols)>1 else 0, key="cross2")
+                    
+                    if cat1 != cat2:
+                        cross_tab = pd.crosstab(df_encoded[cat1], df_encoded[cat2], margins=True, margins_name="المجموع")
+                        st.dataframe(cross_tab, use_container_width=True)
+                        fig_cross = px.histogram(df_encoded, x=cat1, color=cat2, barmode='group', text_auto=True)
+                        st.plotly_chart(fig_cross, use_container_width=True)
+            else:
+                st.warning("لا توجد بيانات شخصية.")
 
         # ==========================================
-        # التبويب الثاني: الإحصاء الوصفي (تم إضافة ميزة الفصل هنا)
+        # التبويب الثاني: الإحصاء الوصفي
         with tab2:
-            st.subheader("📊 الإحصاء الوصفي والتحليل المقارن")
-            st.markdown("يمكنك هنا رؤية المتوسطات للكل، أو فصلها حسب المتغير (مثل ذكر وأنثى).")
-            
+            st.subheader("📊 الإحصاء الوصفي للمتغيرات والمجموع الكلي")
             if analysis_numeric_cols:
-                # ميزة الفصل الذكي
-                split_view = st.checkbox("🔄 فصل النتائج حسب متغير (مثلاً: مقارنة متوسطات الذكور ضد الإناث)")
-                
-                if split_view and categorical_cols:
-                    split_col = st.selectbox("اختر المتغير الذي تريد الفصل بناءً عليه:", categorical_cols)
-                    # حساب المتوسطات لكل مجموعة
-                    grouped_desc = df_encoded.groupby(split_col)[analysis_numeric_cols].mean().T
-                    st.markdown(f"**متوسطات الإجابات مقسمة حسب ({split_col}):**")
-                    st.dataframe(grouped_desc.style.background_gradient(axis=1), use_container_width=True)
-                    st.info("💡 الأرقام أعلاه تمثل المتوسط الحسابي لكل مجموعة. يمكنك ملاحظة أي فئة سجلت درجات أعلى في الاستبيان.")
-                else:
-                    # العرض العادي للكل
-                    desc_df = df_encoded[analysis_numeric_cols].describe().T
-                    desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
-                    st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
-            else: st.error("لم يتم العثور على أسئلة.")
+                desc_df = df_encoded[analysis_numeric_cols].describe().T
+                desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
+                st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
+            else:
+                st.error("لم يتم العثور على أسئلة.")
 
         # ==========================================
         # التبويب الثالث: الثبات
         with tab3:
             st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
+            st.markdown("يتم حساب الثبات للأسئلة الأساسية فقط (بدون المجموع الكلي لضمان دقة النتيجة).")
             if len(base_numeric_cols) > 1:
                 try:
-                    alpha_val = pg.cronbach_alpha(data=df_encoded[base_numeric_cols].dropna())[0]
+                    alpha_data = df_encoded[base_numeric_cols].dropna()
+                    alpha_val = pg.cronbach_alpha(data=alpha_data)[0]
                     st.metric(label="قيمة ألفا كرونباخ", value=f"{alpha_val:.3f}")
                     if alpha_val >= 0.60: st.success("✅ الاستبيان يتمتع بثبات عالٍ.")
                     else: st.warning("⚠️ الثبات ضعيف.")
-                except Exception: st.error("تعذر حساب الثبات.")
+                except Exception:
+                    st.error("تعذر حساب الثبات.")
 
         # ==========================================
-        # التبويب الرابع: الفروق
+        # التبويب الرابع: الفروق (مركز على المجموع الكلي)
         with tab4:
             st.subheader("⚖️ اختبار الفروق وحجم الأثر")
+            st.markdown("تلقائياً يتم قياس الفروق بناءً على **المجموع الكلي للاستبيان**، ويمكنك اختيار سؤال محدد إذا أردت.")
             if categorical_cols and analysis_numeric_cols:
-                group_col = st.selectbox("المتغير المستقل (فئات):", categorical_cols, key="dif_g")
-                test_col = st.selectbox("المتغير التابع (المجموع الكلي أو سؤال):", analysis_numeric_cols, key="dif_t")
+                group_col = st.selectbox("المتغير المستقل (فئات/ديموغرافي):", categorical_cols, key="dif_g")
+                test_col = st.selectbox("المتغير التابع:", analysis_numeric_cols, key="dif_t")
+                
                 clean_data = df_encoded[[group_col, test_col]].dropna()
                 groups = clean_data[group_col].unique()
+                
                 try:
                     if len(groups) == 2:
-                        res = pg.ttest(clean_data[clean_data[group_col] == groups[0]][test_col], clean_data[clean_data[group_col] == groups[1]][test_col])
+                        st.markdown("**تم تشغيل:** `اختبار (T-test) لعينتين مستقلتين`")
+                        g1 = clean_data[clean_data[group_col] == groups[0]][test_col]
+                        g2 = clean_data[clean_data[group_col] == groups[1]][test_col]
+                        res = pg.ttest(g1, g2)
                         st.dataframe(res)
-                        if res['p-val'].values[0] < 0.05: st.success(f"توجد فروق دالة. حجم الأثر: {res['cohen-d'].values[0]:.2f}")
-                        else: st.warning("لا توجد فروق دالة.")
+                        
+                        pval = res['p-val'].values[0] if 'p-val' in res.columns else 1.0
+                        eff = res['cohen-d'].values[0] if 'cohen-d' in res.columns else 0.0
+                        
+                        if pval < 0.05: st.success(f"توجد فروق ذات دلالة إحصائية. **حجم الأثر (Cohen's d): {eff:.2f}**")
+                        else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                        
                     elif len(groups) > 2:
+                        st.markdown("**تم تشغيل:** `تحليل التباين الأحادي (ANOVA)`")
                         res = pg.anova(data=clean_data, dv=test_col, between=group_col)
                         st.dataframe(res)
-                        if res['p-unc'].values[0] < 0.05: st.success(f"توجد فروق دالة. حجم الأثر: {res['np2'].values[0]:.2f}")
-                        else: st.warning("لا توجد فروق دالة.")
+                        
+                        pval = res['p-unc'].values[0] if 'p-unc' in res.columns else 1.0
+                        eff2 = res['np2'].values[0] if 'np2' in res.columns else 0.0
+                        
+                        if pval < 0.05: st.success(f"توجد فروق ذات دلالة إحصائية. **حجم الأثر (مربع إيتا جزئي np2): {eff2:.2f}**")
+                        else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                        
                     st.plotly_chart(px.box(clean_data, x=group_col, y=test_col, color=group_col), use_container_width=True)
-                except Exception: st.error("تعذر إجراء الاختبار.")
+                except Exception as e:
+                    st.error("تعذر إجراء الاختبار (تأكد من تنوع الإجابات).")
 
         # ==========================================
         # التبويب الخامس: الارتباط
@@ -156,29 +193,307 @@ if uploaded_file is not None:
             if len(analysis_numeric_cols) >= 2:
                 v1 = st.selectbox("المتغير الأول:", analysis_numeric_cols, key="c1")
                 v2 = st.selectbox("المتغير الثاني:", analysis_numeric_cols, index=1, key="c2")
+                
                 if v1 != v2:
                     cp, cs = st.columns(2)
                     with cp:
-                        try: st.markdown("#### بيرسون"); st.dataframe(pg.corr(df_encoded[v1], df_encoded[v2], method='pearson')[['n', 'r', 'p-val']])
+                        st.markdown("#### 1️⃣ معامل بيرسون")
+                        try:
+                            rp = pg.corr(df_encoded[v1], df_encoded[v2], method='pearson')
+                            st.dataframe(rp[['n', 'r', 'p-val']])
                         except: st.error("خطأ بالحساب")
                     with cs:
-                        try: st.markdown("#### سبيرمان"); st.dataframe(pg.corr(df_encoded[v1], df_encoded[v2], method='spearman')[['n', 'r', 'p-val']])
+                        st.markdown("#### 2️⃣ معامل سبيرمان")
+                        try:
+                            rs = pg.corr(df_encoded[v1], df_encoded[v2], method='spearman')
+                            st.dataframe(rs[['n', 'r', 'p-val']])
                         except: st.error("خطأ بالحساب")
                     st.plotly_chart(px.scatter(df_encoded, x=v1, y=v2, trendline="ols"), use_container_width=True)
 
         # ==========================================
         # التبويب السادس: الانحدار
         with tab6:
-            st.subheader("📈 تحليل الانحدار والتأثير (Regression)")
+            st.subheader("📈 تحليل الانحدار والتنبؤ (Regression)")
             if len(analysis_numeric_cols) >= 2:
-                dep_var = st.selectbox("المتغير التابع (Y):", analysis_numeric_cols, key='reg_y')
-                indep_vars = st.multiselect("المتغيرات المستقلة (X):", [c for c in analysis_numeric_cols if c != dep_var], key='reg_x')
+                dep_var = st.selectbox("المتغير التابع (النتيجة / Y):", analysis_numeric_cols, key='reg_y')
+                indep_vars = st.multiselect("المتغيرات المستقلة (المؤثرات / X):", [c for c in analysis_numeric_cols if c != dep_var], key='reg_x')
                 if indep_vars:
                     reg_data = df_encoded[[dep_var] + indep_vars].dropna()
-                    try:
-                        lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
-                        st.dataframe(lm)
-                        st.info(f"💡 قوة التفسير (R²): {lm['r2'].values[0]:.3f}")
-                    except Exception as e: st.error(f"خطأ: {e}")
+                    if len(reg_data) > 2:
+                        try:
+                            lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
+                            st.dataframe(lm)
+                            r2 = lm['r2'].values[0] if 'r2' in lm.columns else 0
+                            st.info(f"💡 قوة التفسير (R²): المتغيرات المستقلة تُفسر نسبة **({float(r2)*100:.1f}%)** من التغير في المتغير التابع.")
+                        except Exception as e: st.error(f"خطأ: {e}")
 
-    except Exception as e: st.error(f"حدث خطأ: {e}")
+        # ==========================================
+        # التبويب السابع: مقارنة مفصلة حسب الجنس والعمر
+        # ==========================================
+        with tab7:
+            st.subheader("📊 مقارنة مفصلة: الذكور والإناث والعمر (لكل سؤال)")
+            st.markdown("هذا التبويب يُظهر مقارنة دقيقة بين الذكور والإناث **لكل سؤال على حدة**، مع إحصائيات مفصلة واختبارات T-test.")
+            
+            if categorical_cols and base_numeric_cols:
+                # اختيار متغير الجنس للمقارنة
+                gender_col = st.selectbox("🔍 اختر عمود الجنس:", categorical_cols, key="gender_select")
+                
+                # عرض الفئات الموجودة
+                unique_genders = df_encoded[gender_col].dropna().unique()
+                st.info(f"✅ الفئات الموجودة في '{gender_col}': {', '.join(map(str, unique_genders))}")
+                
+                # اختيار متغير العمر إن وجد
+                age_col = None
+                age_keywords = ['عمر', 'سن', 'age']
+                for col in categorical_cols:
+                    if any(keyword in col.lower() for keyword in age_keywords):
+                        age_col = col
+                        break
+                
+                if age_col:
+                    st.success(f"🎂 تم اكتشاف عمود العمر: '{age_col}'")
+                
+                # زر لتنفيذ التحليل
+                if st.button("🚀 بدء التحليل المفصل للمقارنة", type="primary"):
+                    if len(unique_genders) >= 2:
+                        st.markdown("---")
+                        
+                        # 📋 الجدول الشامل لجميع الأسئلة
+                        st.markdown("### 📋 الجدول الشامل: مقارنة الذكور والإناث لجميع الأسئلة")
+                        
+                        comparison_data = []
+                        
+                        for idx, question in enumerate(base_numeric_cols, 1):
+                            row = {
+                                'م': idx,
+                                'السؤال': question
+                            }
+                            
+                            # حساب الإحصائيات لكل فئة جنس
+                            for gender in unique_genders:
+                                gender_data = df_encoded[df_encoded[gender_col] == gender][question].dropna()
+                                if len(gender_data) > 0:
+                                    row[f'عدد {gender}'] = int(len(gender_data))
+                                    row[f'متوسط {gender}'] = f"{gender_data.mean():.3f}"
+                                    row[f'انحراف {gender}'] = f"{gender_data.std():.3f}"
+                                else:
+                                    row[f'عدد {gender}'] = 0
+                                    row[f'متوسط {gender}'] = "-"
+                                    row[f'انحراف {gender}'] = "-"
+                            
+                            # اختبار T-test إذا كان هناك فئتين
+                            if len(unique_genders) == 2:
+                                g1 = df_encoded[df_encoded[gender_col] == unique_genders[0]][question].dropna()
+                                g2 = df_encoded[df_encoded[gender_col] == unique_genders[1]][question].dropna()
+                                
+                                if len(g1) > 1 and len(g2) > 1:
+                                    try:
+                                        ttest_res = pg.ttest(g1, g2, correction='auto')
+                                        p_val = ttest_res['p-val'].values[0]
+                                        cohen_d = ttest_res['cohen-d'].values[0] if 'cohen-d' in ttest_res.columns else 0
+                                        
+                                        row['p-value'] = f"{p_val:.4f}"
+                                        row['Cohen d'] = f"{cohen_d:.3f}"
+                                        
+                                        if p_val < 0.05:
+                                            row['الدلالة الإحصائية'] = "✅ معنوي"
+                                            row['التفسير'] = "توجد فروق ذات دلالة"
+                                        else:
+                                            row['الدلالة الإحصائية'] = "❌ غير معنوي"
+                                            row['التفسير'] = "لا توجد فروق ذات دلالة"
+                                    except:
+                                        row['p-value'] = "خطأ"
+                                        row['Cohen d'] = "-"
+                                        row['الدلالة الإحصائية'] = "-"
+                                        row['التفسير'] = "-"
+                                else:
+                                    row['p-value'] = "N/A"
+                                    row['Cohen d'] = "N/A"
+                                    row['الدلالة الإحصائية'] = "N/A"
+                                    row['التفسير'] = "عدد غير كافٍ"
+                            
+                            comparison_data.append(row)
+                        
+                        # عرض الجدول
+                        full_comparison_df = pd.DataFrame(comparison_data)
+                        st.dataframe(
+                            full_comparison_df.style.set_properties(**{
+                                'text-align': 'center',
+                                'background-color': '#f0f8ff'
+                            }).highlight_between(
+                                left=0, right=0.05, subset=['p-value'], color='#90EE90"
+                            ),
+                            use_container_width=True,
+                            height=600
+                        )
+                        
+                        # 📥 زر تصدير الجدول
+                        csv = full_comparison_df.to_csv(index=False, encoding='utf-8-sig')
+                        st.download_button(
+                            label="📥 تحميل الجدول كملف CSV",
+                            data=csv,
+                            file_name='مقارنة_الذكور_الإناث.csv',
+                            mime='text/csv',
+                        )
+                        
+                        st.markdown("---")
+                        
+                        # 🔍 تحليل مفصل لسؤال محدد
+                        st.markdown("### 🔍 التحليل المفصل لسؤال محدد")
+                        
+                        selected_question = st.selectbox(
+                            "اختر سؤالاً للتحليل المفصل:",
+                            base_numeric_cols,
+                            key="detailed_question"
+                        )
+                        
+                        if selected_question:
+                            col1, col2, col3 = st.columns([1, 1, 1])
+                            
+                            with col1:
+                                st.markdown(f"#### 📊 إحصائيات {unique_genders[0]}")
+                                g1_data = df_encoded[df_encoded[gender_col] == unique_genders[0]][selected_question].dropna()
+                                if len(g1_data) > 0:
+                                    st.metric("العدد", len(g1_data))
+                                    st.metric("المتوسط", f"{g1_data.mean():.3f}")
+                                    st.metric("الانحراف المعياري", f"{g1_data.std():.3f}")
+                                    st.metric("الحد الأدنى", int(g1_data.min()))
+                                    st.metric("الحد الأقصى", int(g1_data.max()))
+                                else:
+                                    st.warning("لا توجد بيانات")
+                            
+                            with col2:
+                                st.markdown(f"#### 📊 إحصائيات {unique_genders[1]}")
+                                g2_data = df_encoded[df_encoded[gender_col] == unique_genders[1]][selected_question].dropna()
+                                if len(g2_data) > 0:
+                                    st.metric("العدد", len(g2_data))
+                                    st.metric("المتوسط", f"{g2_data.mean():.3f}")
+                                    st.metric("الانحراف المعياري", f"{g2_data.std():.3f}")
+                                    st.metric("الحد الأدنى", int(g2_data.min()))
+                                    st.metric("الحد الأقصى", int(g2_data.max()))
+                                else:
+                                    st.warning("لا توجد بيانات")
+                            
+                            with col3:
+                                st.markdown("#### 🧪 نتيجة الاختبار الإحصائي")
+                                if len(g1_data) > 1 and len(g2_data) > 1:
+                                    try:
+                                        ttest_result = pg.ttest(g1_data, g2_data, correction='auto')
+                                        p_value = ttest_result['p-val'].values[0]
+                                        cohen_d = ttest_result['cohen-d'].values[0] if 'cohen-d' in ttest_result.columns else 0
+                                        
+                                        st.metric("قيمة t", f"{ttest_result['T'].values[0]:.3f}")
+                                        st.metric("p-value", f"{p_value:.4f}")
+                                        st.metric("Cohen's d", f"{cohen_d:.3f}")
+                                        
+                                        if p_value < 0.05:
+                                            st.success("✅ فروق ذات دلالة إحصائية")
+                                        else:
+                                            st.info("ℹ️ لا توجد فروق ذات دلالة")
+                                        
+                                        # تفسير حجم الأثر
+                                        if abs(cohen_d) < 0.2:
+                                            st.caption("📏 حجم الأثر: صغير جداً")
+                                        elif abs(cohen_d) < 0.5:
+                                            st.caption("📏 حجم الأثر: صغير")
+                                        elif abs(cohen_d) < 0.8:
+                                            st.caption("📏 حجم الأثر: متوسط")
+                                        else:
+                                            st.caption("📏 حجم الأثر: كبير")
+                                            
+                                    except Exception as e:
+                                        st.error(f"خطأ: {e}")
+                            
+                            st.markdown("---")
+                            
+                            # 📈 الرسوم البيانية
+                            st.markdown("### 📈 الرسوم البيانية للمقارنة")
+                            
+                            tab_chart1, tab_chart2 = st.tabs(["📊 مخطط صندوقي", "📊 مخطط أعمدة"])
+                            
+                            with tab_chart1:
+                                plot_data = df_encoded[[gender_col, selected_question]].dropna().copy()
+                                plot_data[gender_col] = plot_data[gender_col].astype(str)
+                                
+                                fig_box = px.box(
+                                    plot_data,
+                                    x=gender_col,
+                                    y=selected_question,
+                                    color=gender_col,
+                                    points="all",
+                                    title=f"توزيع إجابات '{selected_question}' حسب '{gender_col}'",
+                                    labels={gender_col: 'المجموعة', selected_question: 'الدرجة'}
+                                )
+                                fig_box.update_layout(showlegend=False)
+                                st.plotly_chart(fig_box, use_container_width=True)
+                            
+                            with tab_chart2:
+                                # حساب المتوسطات لكل فئة
+                                mean_data = df_encoded.groupby(gender_col)[selected_question].mean().reset_index()
+                                mean_data[gender_col] = mean_data[gender_col].astype(str)
+                                
+                                fig_bar = px.bar(
+                                    mean_data,
+                                    x=gender_col,
+                                    y=selected_question,
+                                    color=gender_col,
+                                    title=f"المتوسطات لـ '{selected_question}' حسب '{gender_col}'",
+                                    labels={gender_col: 'المجموعة', selected_question: 'المتوسط'},
+                                    text_auto='.2f'
+                                )
+                                fig_bar.update_layout(showlegend=False)
+                                st.plotly_chart(fig_bar, use_container_width=True)
+                        
+                        # 👵 تحليل العمر إن وجد
+                        if age_col:
+                            st.markdown("---")
+                            st.markdown(f"### 👵 التحليل حسب العمر: '{age_col}'")
+                            
+                            age_groups = df_encoded[age_col].dropna().unique()
+                            
+                            if len(age_groups) > 1:
+                                age_comparison_data = []
+                                
+                                for idx, question in enumerate(base_numeric_cols[:5], 1):  # أول 5 أسئلة فقط للتبسيط
+                                    row = {'م': idx, 'السؤال': question}
+                                    
+                                    for age_group in age_groups:
+                                        age_data = df_encoded[df_encoded[age_col] == age_group][question].dropna()
+                                        if len(age_data) > 0:
+                                            row[f'متوسط ({age_group})'] = f"{age_data.mean():.2f}"
+                                            row[f'عدد ({age_group})'] = int(len(age_data))
+                                        else:
+                                            row[f'متوسط ({age_group})'] = "-"
+                                            row[f'عدد ({age_group})'] = 0
+                                    
+                                    age_comparison_data.append(row)
+                                
+                                age_df = pd.DataFrame(age_comparison_data)
+                                st.dataframe(age_df, use_container_width=True)
+                                
+                                # رسم بياني للعمر
+                                if len(base_numeric_cols) > 0:
+                                    sample_q = base_numeric_cols[0]
+                                    age_plot_data = df_encoded[[age_col, sample_q]].dropna().copy()
+                                    age_plot_data[age_col] = age_plot_data[age_col].astype(str)
+                                    
+                                    fig_age = px.box(
+                                        age_plot_data,
+                                        x=age_col,
+                                        y=sample_q,
+                                        color=age_col,
+                                        title=f"توزيع '{sample_q}' حسب '{age_col}'",
+                                        points="all"
+                                    )
+                                    st.plotly_chart(fig_age, use_container_width=True)
+                        
+                    else:
+                        st.error(f"❌ يجب أن يحتوي عمود '{gender_col}' على فئتين على الأقل (مثل: ذكر، أنثى)")
+                        st.info(f"💡 الفئات الموجودة حالياً: {unique_genders}")
+            else:
+                st.warning("⚠️ يرجى تحديد المتغيرات الديموغرافية وأسئلة الاستبيان من القائمة الجانبية أولاً")
+                
+    except Exception as e:
+        st.error(f"حدث خطأ: {e}")
+        import traceback
+        st.code(traceback.format_exc())
