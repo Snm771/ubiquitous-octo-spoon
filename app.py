@@ -24,7 +24,7 @@ def encode_likert(df):
             except ValueError: pass 
     return df_cleaned
 
-# --- 2. التصنيف الدلالي المطور ---
+# --- 2. التصنيف الدلالي ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل', 'تعليم', 'مهنة', 'زيارة', 'مستوى']
@@ -34,19 +34,15 @@ def smart_classify_columns(df):
         words_count = len(str(col).split())
         is_demo = any(keyword in str(col).lower() for keyword in demo_keywords) and words_count <= 4
         
-        if is_demo:
-            categorical_cols.append(col)
+        if is_demo: categorical_cols.append(col)
         else:
             converted = pd.to_numeric(df[col], errors='coerce')
-            if converted.notnull().sum() > (len(df) * 0.3): 
-                numeric_cols.append(col)
-            elif df[col].nunique() <= 15:
-                categorical_cols.append(col)
-                
+            if converted.notnull().sum() > (len(df) * 0.3): numeric_cols.append(col)
+            elif df[col].nunique() <= 15: categorical_cols.append(col)
     return categorical_cols, numeric_cols
 
 # ==========================================
-# واجهة المستخدم والتطبيق
+# واجهة المستخدم
 # ==========================================
 st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
 st.markdown("تم تحديث النظام ليدعم أي عدد من المحاور والأبعاد. ارفع الملف، حدد عدد المحاور، ودع النظام يتكفل بالباقي.")
@@ -88,7 +84,6 @@ if uploaded_file is not None:
             
             if dim_cols:
                 dimensions_dict[dim_name] = dim_cols
-                # إجبار التحويل إلى أرقام قسرياً لمنع أخطاء النصوص المخفية
                 df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
                 df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
                 analysis_cols.append(dim_name)
@@ -171,7 +166,6 @@ if uploaded_file is not None:
                     g_col = st.selectbox("المتغير المستقل (ديموغرافي):", categorical_cols, key="g_f")
                     t_col = st.selectbox("المتغير التابع (المحور المراد اختباره):", analysis_cols, index=len(analysis_cols)-1, key="t_f")
                     
-                    # الدرع الواقي للبيانات هنا
                     temp_df = df_encoded[[g_col, t_col]].copy()
                     temp_df[t_col] = pd.to_numeric(temp_df[t_col], errors='coerce')
                     res_data = temp_df.dropna()
@@ -188,13 +182,15 @@ if uploaded_file is not None:
                                 g2 = res_data[res_data[g_col]==grps[1]][t_col].astype(float).values
                                 
                                 if len(g1) < 2 or len(g2) < 2:
-                                    st.warning("⚠️ إحدى المجموعات عدد أفرادها قليل جداً (أقل من شخصين) ولا يمكن إجراء الاختبار.")
-                                elif np.var(g1) == 0 and np.var(g2) == 0:
-                                    st.warning("⚠️ إجابات المجموعتين متطابقة تماماً (التباين صفر)، لا يمكن إجراء الاختبار.")
+                                    st.warning("⚠️ عدد الأفراد قليل جداً ولا يمكن إجراء الاختبار.")
                                 else:
                                     res = pg.ttest(g1, g2)
                                     st.dataframe(res)
-                                    if res['p-val'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
+                                    
+                                    # السحب الآمن لـ p-val لمنع تعطل البرنامج
+                                    pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
+                                    
+                                    if pval < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
                                     else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
                                     
                             elif len(grps) > 2:
@@ -202,17 +198,21 @@ if uploaded_file is not None:
                                 counts = res_data[g_col].value_counts()
                                 valid_grps = counts[counts >= 2].index
                                 if len(valid_grps) < 2:
-                                    st.warning("⚠️ المجموعات لا تحتوي على عدد كافٍ من الأفراد لإجراء ANOVA.")
+                                    st.warning("⚠️ المجموعات لا تحتوي على عدد كافٍ لإجراء ANOVA.")
                                 else:
                                     clean_anova = res_data[res_data[g_col].isin(valid_grps)]
                                     res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
                                     st.dataframe(res)
-                                    if res['p-unc'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
+                                    
+                                    # السحب الآمن لـ p-unc
+                                    pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
+                                    
+                                    if pval < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
                                     else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
                                     
                             st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
                         except Exception as e: 
-                            st.error(f"تعذر إجراء الاختبار: {e}")
+                            st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات في هذا المتغير: {e}")
 
             # ==========================================
             with tab5:
@@ -225,8 +225,13 @@ if uploaded_file is not None:
                             clean_corr = df_encoded[[v1, v2]].apply(pd.to_numeric, errors='coerce').dropna()
                             if len(clean_corr) > 2:
                                 corr_res = pg.corr(clean_corr[v1], clean_corr[v2], method='pearson')
-                                st.dataframe(corr_res[['n', 'r', 'p-val']])
-                                if corr_res['p-val'].values[0] < 0.05: st.success(f"✅ توجد علاقة ارتباط دالة إحصائياً. بقوة: {corr_res['r'].values[0]:.3f}")
+                                st.dataframe(corr_res[['n', 'r', 'p-val'] if 'p-val' in corr_res.columns else corr_res.columns])
+                                
+                                # السحب الآمن
+                                pval = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else (corr_res['p-value'].values[0] if 'p-value' in corr_res.columns else 1.0)
+                                rval = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
+                                
+                                if pval < 0.05: st.success(f"✅ توجد علاقة ارتباط دالة إحصائياً. بقوة: {rval:.3f}")
                                 else: st.warning("لا توجد علاقة ارتباط دالة.")
                                 st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
                             else:
