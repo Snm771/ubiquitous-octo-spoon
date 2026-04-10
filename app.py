@@ -78,9 +78,9 @@ if uploaded_file is not None:
             df_encoded[axis2_name] = df_encoded[axis2_cols].mean(axis=1)
             analysis_cols.append(axis2_name)
             
-        # المجموع الكلي للاستبيان
-        if axis1_cols and axis2_cols:
-            df_encoded['متوسط الاستبيان الكلي'] = df_encoded[axis1_cols + axis2_cols].mean(axis=1)
+        # المجموع الكلي للاستبيان (تم التعديل ليأخذ كل الأسئلة بلا استثناء)
+        if len(all_questions) > 0:
+            df_encoded['متوسط الاستبيان الكلي'] = df_encoded[all_questions].mean(axis=1)
             analysis_cols.append('متوسط الاستبيان الكلي')
 
         if not analysis_cols:
@@ -121,14 +121,13 @@ if uploaded_file is not None:
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط الحسابي', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط الحسابي', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
-                # 2. الإحصاء التفصيلي لكل فقرة (الميزة الجديدة المضافة بناءً على طلبك)
+                # 2. الإحصاء التفصيلي لكل فقرة
                 st.markdown("### 2️⃣ الإحصاء التفصيلي لجميع فقرات (أسئلة) الاستبيان")
                 st.markdown("يعرض هذا الجدول المتوسط والانحراف المعياري لكل سؤال لمعرفة الأسئلة الأعلى والأدنى استجابة.")
-                all_items = axis1_cols + axis2_cols
-                if all_items:
-                    items_desc = df_encoded[all_items].describe().T
+                # التعديل هنا ليعرض كل الأسئلة بلا استثناء
+                if all_questions:
+                    items_desc = df_encoded[all_questions].describe().T
                     items_desc = items_desc.rename(columns={'count': 'العدد', 'mean': 'المتوسط الحسابي', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
-                    # تلوين المتوسطات لتسهيل القراءة بالعين
                     st.dataframe(items_desc[['العدد', 'المتوسط الحسابي', 'الانحراف المعياري', 'الأدنى', 'الأقصى']].style.background_gradient(subset=['المتوسط الحسابي'], cmap='Blues'), use_container_width=True)
 
                 # 3. إحصاء مقارن حسب الفئات
@@ -155,14 +154,15 @@ if uploaded_file is not None:
                     a2 = pg.cronbach_alpha(data=df_encoded[axis2_cols].dropna())[0]
                     alpha_results.append({"المحور": axis2_name, "عدد العبارات": len(axis2_cols), "معامل ألفا": round(a2, 3)})
                 
-                all_q = axis1_cols + axis2_cols
+                # التعديل هنا لحساب جميع الأسئلة بلا استثناء
+                all_q = all_questions 
                 if len(all_q) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[all_q].dropna())[0]
                     alpha_results.append({"المحور": "الاستبيان ككل", "عدد العبارات": len(all_q), "معامل ألفا": round(a_total, 3)})
                 
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
-                    if a_total >= 0.60: st.success("✅ أداة الدراسة تتمتع بثبات ممتاز.")
+                    if 'a_total' in locals() and a_total >= 0.60: st.success("✅ أداة الدراسة تتمتع بثبات ممتاز.")
                     else: st.warning("⚠️ الثبات يحتاج للمراجعة.")
 
             # ==========================================
