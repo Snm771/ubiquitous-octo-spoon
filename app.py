@@ -24,15 +24,13 @@ def encode_likert(df):
             except ValueError: pass 
     return df_cleaned
 
-# --- 2. التصنيف الدلالي المطور (مع فلتر الطول لمنع ضياع الأسئلة) ---
+# --- 2. التصنيف الدلالي المطور ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل', 'تعليم', 'مهنة', 'زيارة', 'مستوى']
     
     for col in df.columns:
         if col.lower() in ['timestamp', 'unnamed: 0']: continue
-        
-        # فلتر الطول: البيانات الشخصية غالباً تكون أقل من 5 كلمات
         words_count = len(str(col).split())
         is_demo = any(keyword in str(col).lower() for keyword in demo_keywords) and words_count <= 4
         
@@ -70,14 +68,12 @@ if uploaded_file is not None:
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # --- محرك المحاور الديناميكي ---
         num_dims = st.sidebar.number_input("🔢 كم عدد المحاور/الأبعاد في دراستك؟", min_value=1, max_value=15, value=6)
         
         dimensions_dict = {}
         analysis_cols = []
         active_questions = []
         
-        # توزيع مبدئي للأسئلة
         chunk_size = max(1, len(all_questions) // int(num_dims)) if all_questions else 1
         
         for i in range(int(num_dims)):
@@ -92,14 +88,14 @@ if uploaded_file is not None:
             
             if dim_cols:
                 dimensions_dict[dim_name] = dim_cols
+                # إجبار التحويل إلى أرقام قسرياً لمنع أخطاء النصوص المخفية
+                df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
                 df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
                 analysis_cols.append(dim_name)
                 active_questions.extend(dim_cols)
                 
-        # إزالة التكرار
         active_questions = list(dict.fromkeys(active_questions))
 
-        # المجموع الكلي
         if len(active_questions) > 0:
             df_encoded['الاستبيان ككل (المتوسط العام)'] = df_encoded[active_questions].mean(axis=1)
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
@@ -174,24 +170,49 @@ if uploaded_file is not None:
                 if categorical_cols and analysis_cols:
                     g_col = st.selectbox("المتغير المستقل (ديموغرافي):", categorical_cols, key="g_f")
                     t_col = st.selectbox("المتغير التابع (المحور المراد اختباره):", analysis_cols, index=len(analysis_cols)-1, key="t_f")
-                    res_data = df_encoded[[g_col, t_col]].dropna()
+                    
+                    # الدرع الواقي للبيانات هنا
+                    temp_df = df_encoded[[g_col, t_col]].copy()
+                    temp_df[t_col] = pd.to_numeric(temp_df[t_col], errors='coerce')
+                    res_data = temp_df.dropna()
+                    
                     grps = res_data[g_col].unique()
                     
-                    try:
-                        if len(grps) == 2:
-                            st.markdown(f"**نوع الاختبار:** `T-test`")
-                            res = pg.ttest(res_data[res_data[g_col]==grps[0]][t_col], res_data[res_data[g_col]==grps[1]][t_col])
-                            st.dataframe(res)
-                            if res['p-val'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
-                            else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
-                        elif len(grps) > 2:
-                            st.markdown(f"**نوع الاختبار:** `ANOVA`")
-                            res = pg.anova(data=res_data, dv=t_col, between=g_col)
-                            st.dataframe(res)
-                            if res['p-unc'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
-                            else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
-                        st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
-                    except: st.error("البيانات غير كافية لإجراء الاختبار.")
+                    if len(grps) < 2:
+                        st.warning("⚠️ لا توجد مجموعات كافية للمقارنة في هذا المتغير.")
+                    else:
+                        try:
+                            if len(grps) == 2:
+                                st.markdown(f"**نوع الاختبار:** `T-test`")
+                                g1 = res_data[res_data[g_col]==grps[0]][t_col].astype(float).values
+                                g2 = res_data[res_data[g_col]==grps[1]][t_col].astype(float).values
+                                
+                                if len(g1) < 2 or len(g2) < 2:
+                                    st.warning("⚠️ إحدى المجموعات عدد أفرادها قليل جداً (أقل من شخصين) ولا يمكن إجراء الاختبار.")
+                                elif np.var(g1) == 0 and np.var(g2) == 0:
+                                    st.warning("⚠️ إجابات المجموعتين متطابقة تماماً (التباين صفر)، لا يمكن إجراء الاختبار.")
+                                else:
+                                    res = pg.ttest(g1, g2)
+                                    st.dataframe(res)
+                                    if res['p-val'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
+                                    else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                                    
+                            elif len(grps) > 2:
+                                st.markdown(f"**نوع الاختبار:** `ANOVA`")
+                                counts = res_data[g_col].value_counts()
+                                valid_grps = counts[counts >= 2].index
+                                if len(valid_grps) < 2:
+                                    st.warning("⚠️ المجموعات لا تحتوي على عدد كافٍ من الأفراد لإجراء ANOVA.")
+                                else:
+                                    clean_anova = res_data[res_data[g_col].isin(valid_grps)]
+                                    res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
+                                    st.dataframe(res)
+                                    if res['p-unc'].values[0] < 0.05: st.success("✅ توجد فروق ذات دلالة إحصائية.")
+                                    else: st.warning("لا توجد فروق ذات دلالة إحصائية.")
+                                    
+                            st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
+                        except Exception as e: 
+                            st.error(f"تعذر إجراء الاختبار: {e}")
 
             # ==========================================
             with tab5:
@@ -201,11 +222,15 @@ if uploaded_file is not None:
                     v2 = st.selectbox("المحور الثاني:", analysis_cols, index=1 if len(analysis_cols)>1 else 0, key="c2")
                     if v1 != v2:
                         try:
-                            corr_res = pg.corr(df_encoded[v1], df_encoded[v2], method='pearson')
-                            st.dataframe(corr_res[['n', 'r', 'p-val']])
-                            if corr_res['p-val'].values[0] < 0.05: st.success(f"✅ توجد علاقة ارتباط دالة إحصائياً. بقوة: {corr_res['r'].values[0]:.3f}")
-                            else: st.warning("لا توجد علاقة ارتباط دالة.")
-                            st.plotly_chart(px.scatter(df_encoded, x=v1, y=v2, trendline="ols"), use_container_width=True)
+                            clean_corr = df_encoded[[v1, v2]].apply(pd.to_numeric, errors='coerce').dropna()
+                            if len(clean_corr) > 2:
+                                corr_res = pg.corr(clean_corr[v1], clean_corr[v2], method='pearson')
+                                st.dataframe(corr_res[['n', 'r', 'p-val']])
+                                if corr_res['p-val'].values[0] < 0.05: st.success(f"✅ توجد علاقة ارتباط دالة إحصائياً. بقوة: {corr_res['r'].values[0]:.3f}")
+                                else: st.warning("لا توجد علاقة ارتباط دالة.")
+                                st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
+                            else:
+                                st.warning("بيانات غير كافية للارتباط.")
                         except: st.error("تعذر حساب الارتباط.")
 
             # ==========================================
@@ -215,12 +240,15 @@ if uploaded_file is not None:
                     dep_var = st.selectbox("المتغير التابع (Y):", analysis_cols, key='reg_y')
                     indep_vars = st.multiselect("المتغيرات المستقلة (X):", [c for c in analysis_cols if c != dep_var], default=[c for c in analysis_cols if c != dep_var][:1], key='reg_x')
                     if indep_vars:
-                        reg_data = df_encoded[[dep_var] + indep_vars].dropna()
-                        try:
-                            lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
-                            st.dataframe(lm)
-                            r2 = lm['r2'].values[0] if 'r2' in lm.columns else 0
-                            st.info(f"💡 قوة النموذج (R²): المحاور المستقلة تُفسر نسبة **({float(r2)*100:.1f}%)** من التغير في ({dep_var}).")
-                        except: st.error("حدث خطأ في الانحدار.")
+                        reg_data = df_encoded[[dep_var] + indep_vars].apply(pd.to_numeric, errors='coerce').dropna()
+                        if len(reg_data) > 2:
+                            try:
+                                lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
+                                st.dataframe(lm)
+                                r2 = lm['r2'].values[0] if 'r2' in lm.columns else 0
+                                st.info(f"💡 قوة النموذج (R²): المحاور المستقلة تُفسر نسبة **({float(r2)*100:.1f}%)** من التغير في ({dep_var}).")
+                            except: st.error("حدث خطأ في الانحدار.")
+                        else:
+                            st.warning("عينة غير كافية للانحدار.")
 
     except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف: {e}")
