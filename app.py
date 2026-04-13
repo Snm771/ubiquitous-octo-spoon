@@ -4,7 +4,7 @@ import plotly.express as px
 import pingouin as pg
 import numpy as np
 import os
-
+import openpyxl
 # محاولة استيراد مكتبة OpenAI
 try:
     from openai import OpenAI
