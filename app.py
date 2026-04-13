@@ -3,18 +3,17 @@ import pandas as pd
 import plotly.express as px
 import pingouin as pg
 import numpy as np
-import os
-import openpyxl
-# محاولة استيراد مكتبة OpenAI
+
+# محاولة استيراد مكتبة OpenAI بأمان
 try:
     from openai import OpenAI
 except ImportError:
-    st.error("⚠️ يرجى تثبيت مكتبة openai عبر الأمر: pip install openai")
+    st.warning("جاري إعداد مكتبة OpenAI...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
 # ==========================================
-# --- دوال الذكاء الاصطناعي (AI Functions) المصفحة ---
+# --- دوال الذكاء الاصطناعي (AI Functions) ---
 # ==========================================
 def analyze_hypothesis_text(text, api_key):
     try:
@@ -85,7 +84,7 @@ def get_table_explanation(table_string, context, api_key):
             return response.choices[0].message.content
         return "⚠️ خوادم الذكاء الاصطناعي لم تُرجع أي نص. حاول مرة أخرى."
     except Exception as e:
-        return f"⚠️ تعذر الاتصال بـ OpenAI. تأكد من رصيد الـ API Key أو من تشغيل الـ VPN. تفاصيل الخطأ: {str(e)}"
+        return f"⚠️ تعذر الاتصال بـ OpenAI. تأكد من رصيد الـ API Key. تفاصيل الخطأ: {str(e)}"
 
 # ==========================================
 # --- 1. دالة التشفير الذكي ---
@@ -98,12 +97,19 @@ def encode_likert(df):
         "نعم": 2, "لا": 1
     }
     df_cleaned = df.copy()
-    df_cleaned = df_cleaned.map(lambda x: str(x).strip() if pd.notnull(x) and isinstance(x, str) else x)
+    
+    # تنظيف النصوص برمجياً لتوافق كل إصدارات Pandas
+    for col in df_cleaned.select_dtypes(include=['object']).columns:
+        df_cleaned[col] = df_cleaned[col].apply(lambda x: str(x).strip() if pd.notnull(x) else x)
+        
     df_cleaned = df_cleaned.replace(likert_map)
+    
     for col in df_cleaned.columns:
         if col != 'Timestamp':
-            try: df_cleaned[col] = pd.to_numeric(df_cleaned[col])
-            except ValueError: pass 
+            try: 
+                df_cleaned[col] = pd.to_numeric(df_cleaned[col])
+            except ValueError: 
+                pass 
     return df_cleaned
 
 # --- 2. التصنيف الدلالي المطور ---
@@ -218,7 +224,6 @@ if uploaded_file is not None:
 
                         st.info(f"**📝 التفسير الأكاديمي المسهب:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({total_n}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({top_cat}) بتكرار بلغ ({top_val}) وبنسبة مئوية قدرها ({top_pct:.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير. في المقابل، جاءت فئة ({bot_cat}) كأقل الفئات تمثيلاً بتكرار ({bot_val}) ونسبة ({bot_pct:.1f}%). يُعد هذا التوصيف الديموغرافي محطة منهجية حيوية، حيث يبرز التباين أو التجانس في خصائص العينة، ويمنح الباحث مساحة موضوعية في تعميم النتائج وتفسير الفروق الإحصائية اللاحقة بناءً على هذا التوزيع الديموغرافي.")
                         
-                        # زر الذكاء الاصطناعي الإضافي
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
@@ -404,11 +409,14 @@ if uploaded_file is not None:
                     if st.button("🔍 تحليل الفرضية آلياً"):
                         with st.spinner("جاري فهم الفرضية عبر الذكاء الاصطناعي..."):
                             try:
-                                ai_analysis = analyze_hypothesis_text(user_hypothesis, api_key)
-                                st.success("تم تحليل الفرضية بنجاح:")
-                                st.info(ai_analysis)
+                                # تخزين النتيجة في الجلسة لكي لا تختفي
+                                st.session_state['ai_analysis'] = analyze_hypothesis_text(user_hypothesis, api_key)
                             except Exception as e:
                                 st.error(f"خطأ في الاتصال بالذكاء الاصطناعي: {e}")
+                    
+                    if 'ai_analysis' in st.session_state:
+                        st.success("تم تحليل الفرضية بنجاح:")
+                        st.info(st.session_state['ai_analysis'])
                     
                     st.markdown("---")
                     st.markdown("#### ⚙️ تنفيذ الاختبار وتوليد مناقشة النتائج")
@@ -416,7 +424,6 @@ if uploaded_file is not None:
                     
                     col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"])
                     
-                    # إذا كان فروق نختار من المتغيرات الشخصية كمستقل، وإلا من المحاور
                     if "فروق" in col_type:
                         h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols)
                     else:
@@ -448,7 +455,6 @@ if uploaded_file is not None:
                                     results_str = res.to_markdown()
                                     st.dataframe(res)
                                 
-                                # إرسال النتائج للذكاء الاصطناعي لكتابة التقرير
                                 final_explanation = generate_detailed_explanation(results_str, user_hypothesis, api_key)
                                 
                                 st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
@@ -457,4 +463,4 @@ if uploaded_file is not None:
                             except Exception as e:
                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
-    except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف: {e}")
+    except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف. تأكد من أن الملف ليس فارغاً وأن صيغته صحيحة. التفاصيل: {e}")
