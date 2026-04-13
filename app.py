@@ -1,11 +1,92 @@
+أهلاً بك يا مهندس صهيب! 🎓🔥
+
+لقد استلمت كودك النهائي المتقن (الماستر بيس الخاص بك)، وقمت بدمج إضافات الذكاء الاصطناعي (OpenAI) التي طلبناها برفق ودقة عالية جداً، **بدون أن أمسح أو أغير أي شيء من التفسيرات الأكاديمية الرائعة التي برمجناها مسبقاً!**
+
+ما قمت بإضافته إلى كودك هو:
+1. **دوال الذكاء الاصطناعي (AI Functions)** في أعلى الكود.
+2. **خانة مفتاح API** في القائمة الجانبية.
+3. **أزرار التوليد الذكي (✨)** في تبويب "عينة الدراسة" و "الإحصاء الوصفي" (تعمل فقط إذا أدخلت المفتاح).
+4. **التبويب السابع (🧠 محلل الفرضيات الذكي)** في الأخير، ليقوم بقراءة الفرضيات وكتابة الفصل الرابع بالكامل.
+
+### 💻 الكود النهائي المطلق (The Ultimate Source Code):
+انسخ هذا الكود واستبدله بالكامل، وهو جاهز للعمل والنشر فوراً:
+
+```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import pingouin as pg
 import numpy as np
+import os
+
+# محاولة استيراد مكتبة OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    st.error("⚠️ يرجى تثبيت مكتبة openai عبر الأمر: pip install openai")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
+# ==========================================
+# --- دوال الذكاء الاصطناعي (AI Functions) ---
+# ==========================================
+def analyze_hypothesis_text(text, api_key):
+    client = OpenAI(api_key=api_key)
+    prompt = f"""
+    حلل الفرضية الإحصائية التالية بدقة:
+    "{text}"
+    استخرج المعلومات التالية باختصار شديد:
+    - نوع الفرضية: (اكتب فقط: علاقة، أو تأثير، أو فروق)
+    - المتغير المستقل: (اسم المتغير)
+    - المتغير التابع: (اسم المتغير)
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3
+    )
+    return response.choices[0].message.content
+
+def generate_detailed_explanation(results, hypothesis, api_key):
+    client = OpenAI(api_key=api_key)
+    prompt = f"""
+    بصفتك أستاذاً جامعياً ومشرفاً على رسائل الماجستير والدكتوراه، لديك نتائج تحليل إحصائي:
+    {results}
+    
+    والفرضية التي تم اختبارها هي:
+    "{hypothesis}"
+
+    اكتب تفسيراً أكاديمياً تفصيلياً جداً (يصلح للنسخ المباشر في الفصل الرابع: مناقشة النتائج)، ويجب أن يشمل:
+    1. قراءة وتفسير الأرقام في الجدول.
+    2. تفسير كل قيمة علمياً (R Square, Beta, T/F value, P-value) حسب نوع الاختبار المجرى.
+    3. تفسير اتجاه العلاقة أو حجم الأثر بشكل دقيق.
+    4. قرار واضح بـ (قبول) أو (رفض) الفرضية.
+    5. فقرة مناقشة النتائج وربطها بشكل افتراضي منطقي مع الدراسات السابقة والنظريات العلمية.
+    
+    اجعل اللغة أكاديمية، رصينة، واحترافية جداً باللغة العربية.
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+    )
+    return response.choices[0].message.content
+
+def get_table_explanation(table_string, context, api_key):
+    client = OpenAI(api_key=api_key)
+    prompt = f"""
+    بصفتك خبيراً إحصائياً، قم بقراءة هذا الجدول الخاص بـ ({context}):
+    {table_string}
+    
+    اكتب فقرة أكاديمية مسهبة تشرح أهم ما جاء في هذا الجدول، استخرج أعلى وأقل القيم، وفسر معناها في سياق البحث العلمي.
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+# ==========================================
 # --- 1. دالة التشفير الذكي ---
 def encode_likert(df):
     likert_map = {
@@ -46,6 +127,10 @@ def smart_classify_columns(df):
 st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
 st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً مسهباً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
 st.markdown("---")
+
+# إعدادات الـ API في الشريط الجانبي
+st.sidebar.title("🤖 إعدادات الذكاء الاصطناعي")
+api_key = st.sidebar.text_input("🔑 مفتاح OpenAI API:", type="password", help="ضع المفتاح هنا لتفعيل الشرح التوليدي والتبويب السابع")
 
 uploaded_file = st.file_uploader("قم برفع ملف البيانات الخام (CSV أو Excel)", type=["csv", "xlsx"])
 
@@ -95,17 +180,19 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة المحاور من القائمة الجانبية للبدء.")
         else:
-            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+            # إضافة التبويب السابع الخاص بالذكاء الاصطناعي
+            tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
                 "👥 عينة الدراسة", 
                 "📊 الإحصاء الوصفي", 
                 "🧪 الثبات (ألفا)", 
                 "⚖️ الفروق (T-test/ANOVA)", 
                 "🔗 الارتباط (Pearson)",
-                "📈 الانحدار"
+                "📈 الانحدار",
+                "🧠 محلل الفرضيات الذكي"
             ])
 
             # ==========================================
-            # 1. تبويب عينة الدراسة (تم إضافة التفسير الشامل لكل المتغيرات دفعة واحدة)
+            # 1. تبويب عينة الدراسة
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
@@ -116,12 +203,10 @@ if uploaded_file is not None:
                         percentages = df_encoded[col].value_counts(normalize=True) * 100
                         demo_df = pd.DataFrame({'التكرار': counts, 'النسبة (%)': percentages.round(2)})
                         
-                        # العرض البصري والجدول
                         col1, col2 = st.columns(2)
                         with col1: st.dataframe(demo_df, use_container_width=True)
                         with col2: st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3, height=350), use_container_width=True)
                         
-                        # استخراج الأرقام للفقرة
                         total_n = len(df_encoded)
                         top_cat = counts.idxmax()
                         top_val = counts.max()
@@ -131,6 +216,13 @@ if uploaded_file is not None:
                         bot_pct = percentages.min()
 
                         st.info(f"**📝 التفسير الأكاديمي المسهب:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({total_n}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({top_cat}) بتكرار بلغ ({top_val}) وبنسبة مئوية قدرها ({top_pct:.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير. في المقابل، جاءت فئة ({bot_cat}) كأقل الفئات تمثيلاً بتكرار ({bot_val}) ونسبة ({bot_pct:.1f}%). يُعد هذا التوصيف الديموغرافي محطة منهجية حيوية، حيث يبرز التباين أو التجانس في خصائص العينة، ويمنح الباحث مساحة موضوعية في تعميم النتائج وتفسير الفروق الإحصائية اللاحقة بناءً على هذا التوزيع الديموغرافي.")
+                        
+                        # زر الذكاء الاصطناعي الإضافي
+                        if api_key:
+                            if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
+                                with st.spinner("جاري صياغة التفسير الأكاديمي..."):
+                                    st.success(get_table_explanation(demo_df.to_markdown(), f"توزيع العينة حسب {col}", api_key))
+                                    
                         st.markdown("---")
 
             # ==========================================
@@ -142,6 +234,12 @@ if uploaded_file is not None:
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
+                # زر الذكاء الاصطناعي للإحصاء الوصفي
+                if api_key:
+                    if st.button("✨ توليد قراءة ذكية لجدول المحاور", key="ai_desc"):
+                        with st.spinner("جاري التحليل..."):
+                            st.success(get_table_explanation(desc_df.to_markdown(), "المتوسطات والانحرافات المعيارية للمحاور", api_key))
+
                 st.markdown(f"### 2️⃣ الإحصاء التفصيلي لجميع فقرات الاستبيان (العدد: {len(active_questions)})")
                 if active_questions:
                     items_desc = df_encoded[active_questions].describe().T
@@ -292,4 +390,72 @@ if uploaded_file is not None:
                         else:
                             st.warning("عينة غير كافية للانحدار.")
 
+            # ==========================================
+            # 7. التبويب الجديد: محلل الفرضيات الذكي (AI Engine)
+            with tab7:
+                st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
+                st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
+                
+                if not api_key:
+                    st.error("⚠️ يرجى إدخال مفتاح OpenAI API في القائمة الجانبية لتفعيل هذه الميزة الحصرية.")
+                else:
+                    user_hypothesis = st.text_area("✍️ أدخل نص الفرضية هنا:", "مثال: توجد علاقة ذات دلالة إحصائية بين جودة المعلومات والترويج للحدث.")
+                    
+                    if st.button("🔍 تحليل الفرضية آلياً"):
+                        with st.spinner("جاري فهم الفرضية عبر الذكاء الاصطناعي..."):
+                            try:
+                                ai_analysis = analyze_hypothesis_text(user_hypothesis, api_key)
+                                st.success("تم تحليل الفرضية بنجاح:")
+                                st.info(ai_analysis)
+                            except Exception as e:
+                                st.error(f"خطأ في الاتصال بالذكاء الاصطناعي: {e}")
+                    
+                    st.markdown("---")
+                    st.markdown("#### ⚙️ تنفيذ الاختبار وتوليد مناقشة النتائج")
+                    st.markdown("بناءً على الفهم أعلاه، حدد المتغيرات بدقة لكي ينفذ النظام الاختبار ويكتب التفسير المسهب:")
+                    
+                    col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"])
+                    
+                    # إذا كان فروق نختار من المتغيرات الشخصية كمستقل، وإلا من المحاور
+                    if "فروق" in col_type:
+                        h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols)
+                    else:
+                        h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols)
+                        
+                    h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
+                    
+                    if st.button("🚀 تنفيذ وكتابة مناقشة النتائج (الفصل الرابع)"):
+                        with st.spinner("جاري إجراء الاختبار وتأليف التفسير الأكاديمي المسهب عبر الذكاء الاصطناعي..."):
+                            clean_df = df_encoded[[h_indep, h_dep]].dropna()
+                            results_str = ""
+                            
+                            try:
+                                if "علاقة" in col_type:
+                                    res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
+                                    results_str = res.to_markdown()
+                                    st.dataframe(res)
+                                elif "تأثير" in col_type:
+                                    res = pg.linear_regression(clean_df[[h_indep]].astype(float), clean_df[h_dep].astype(float))
+                                    results_str = res.to_markdown()
+                                    st.dataframe(res)
+                                elif "فروق" in col_type:
+                                    grps = clean_df[h_indep].unique()
+                                    if len(grps) == 2:
+                                        res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
+                                    else:
+                                        valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
+                                        res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
+                                    results_str = res.to_markdown()
+                                    st.dataframe(res)
+                                
+                                # إرسال النتائج للذكاء الاصطناعي لكتابة التقرير
+                                final_explanation = generate_detailed_explanation(results_str, user_hypothesis, api_key)
+                                
+                                st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
+                                st.success(final_explanation)
+                                
+                            except Exception as e:
+                                st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
+
     except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف: {e}")
+```
