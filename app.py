@@ -1,17 +1,3 @@
-أهلاً بك يا مهندس صهيب! 🎓🔥
-
-لقد استلمت كودك النهائي المتقن (الماستر بيس الخاص بك)، وقمت بدمج إضافات الذكاء الاصطناعي (OpenAI) التي طلبناها برفق ودقة عالية جداً، **بدون أن أمسح أو أغير أي شيء من التفسيرات الأكاديمية الرائعة التي برمجناها مسبقاً!**
-
-ما قمت بإضافته إلى كودك هو:
-1. **دوال الذكاء الاصطناعي (AI Functions)** في أعلى الكود.
-2. **خانة مفتاح API** في القائمة الجانبية.
-3. **أزرار التوليد الذكي (✨)** في تبويب "عينة الدراسة" و "الإحصاء الوصفي" (تعمل فقط إذا أدخلت المفتاح).
-4. **التبويب السابع (🧠 محلل الفرضيات الذكي)** في الأخير، ليقوم بقراءة الفرضيات وكتابة الفصل الرابع بالكامل.
-
-### 💻 الكود النهائي المطلق (The Ultimate Source Code):
-انسخ هذا الكود واستبدله بالكامل، وهو جاهز للعمل والنشر فوراً:
-
-```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -28,63 +14,78 @@ except ImportError:
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
 # ==========================================
-# --- دوال الذكاء الاصطناعي (AI Functions) ---
+# --- دوال الذكاء الاصطناعي (AI Functions) المصفحة ---
 # ==========================================
 def analyze_hypothesis_text(text, api_key):
-    client = OpenAI(api_key=api_key)
-    prompt = f"""
-    حلل الفرضية الإحصائية التالية بدقة:
-    "{text}"
-    استخرج المعلومات التالية باختصار شديد:
-    - نوع الفرضية: (اكتب فقط: علاقة، أو تأثير، أو فروق)
-    - المتغير المستقل: (اسم المتغير)
-    - المتغير التابع: (اسم المتغير)
-    """
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
-    )
-    return response.choices[0].message.content
+    try:
+        client = OpenAI(api_key=api_key)
+        prompt = f"""
+        حلل الفرضية الإحصائية التالية بدقة:
+        "{text}"
+        استخرج المعلومات التالية باختصار شديد:
+        - نوع الفرضية: (اكتب فقط: علاقة، أو تأثير، أو فروق)
+        - المتغير المستقل: (اسم المتغير)
+        - المتغير التابع: (اسم المتغير)
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        if response.choices:
+            return response.choices[0].message.content
+        return "⚠️ لم يتم استلام رد من الخادم."
+    except Exception as e:
+        return f"⚠️ خطأ في الاتصال بالذكاء الاصطناعي: {e}"
 
 def generate_detailed_explanation(results, hypothesis, api_key):
-    client = OpenAI(api_key=api_key)
-    prompt = f"""
-    بصفتك أستاذاً جامعياً ومشرفاً على رسائل الماجستير والدكتوراه، لديك نتائج تحليل إحصائي:
-    {results}
-    
-    والفرضية التي تم اختبارها هي:
-    "{hypothesis}"
+    try:
+        client = OpenAI(api_key=api_key)
+        prompt = f"""
+        بصفتك أستاذاً جامعياً ومشرفاً على رسائل الماجستير والدكتوراه، لديك نتائج تحليل إحصائي:
+        {results}
+        
+        والفرضية التي تم اختبارها هي:
+        "{hypothesis}"
 
-    اكتب تفسيراً أكاديمياً تفصيلياً جداً (يصلح للنسخ المباشر في الفصل الرابع: مناقشة النتائج)، ويجب أن يشمل:
-    1. قراءة وتفسير الأرقام في الجدول.
-    2. تفسير كل قيمة علمياً (R Square, Beta, T/F value, P-value) حسب نوع الاختبار المجرى.
-    3. تفسير اتجاه العلاقة أو حجم الأثر بشكل دقيق.
-    4. قرار واضح بـ (قبول) أو (رفض) الفرضية.
-    5. فقرة مناقشة النتائج وربطها بشكل افتراضي منطقي مع الدراسات السابقة والنظريات العلمية.
-    
-    اجعل اللغة أكاديمية، رصينة، واحترافية جداً باللغة العربية.
-    """
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-    )
-    return response.choices[0].message.content
+        اكتب تفسيراً أكاديمياً تفصيلياً جداً (يصلح للنسخ المباشر في الفصل الرابع: مناقشة النتائج)، ويجب أن يشمل:
+        1. قراءة وتفسير الأرقام في الجدول.
+        2. تفسير كل قيمة علمياً (R Square, Beta, T/F value, P-value) حسب نوع الاختبار المجرى.
+        3. تفسير اتجاه العلاقة أو حجم الأثر بشكل دقيق.
+        4. قرار واضح بـ (قبول) أو (رفض) الفرضية.
+        5. فقرة مناقشة النتائج وربطها بشكل افتراضي منطقي مع الدراسات السابقة والنظريات العلمية.
+        
+        اجعل اللغة أكاديمية، رصينة، واحترافية جداً باللغة العربية.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        if response.choices:
+            return response.choices[0].message.content
+        return "⚠️ لم يتم استلام رد من الخادم."
+    except Exception as e:
+        return f"⚠️ خطأ في الاتصال بالذكاء الاصطناعي: {e}"
 
 def get_table_explanation(table_string, context, api_key):
-    client = OpenAI(api_key=api_key)
-    prompt = f"""
-    بصفتك خبيراً إحصائياً، قم بقراءة هذا الجدول الخاص بـ ({context}):
-    {table_string}
-    
-    اكتب فقرة أكاديمية مسهبة تشرح أهم ما جاء في هذا الجدول، استخرج أعلى وأقل القيم، وفسر معناها في سياق البحث العلمي.
-    """
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+    try:
+        client = OpenAI(api_key=api_key)
+        prompt = f"""
+        بصفتك خبيراً إحصائياً، قم بقراءة هذا الجدول الخاص بـ ({context}):
+        {table_string}
+        
+        اكتب فقرة أكاديمية مسهبة تشرح أهم ما جاء في هذا الجدول، استخرج أعلى وأقل القيم، وفسر معناها في سياق البحث العلمي.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        if response.choices and len(response.choices) > 0:
+            return response.choices[0].message.content
+        return "⚠️ خوادم الذكاء الاصطناعي لم تُرجع أي نص. حاول مرة أخرى."
+    except Exception as e:
+        return f"⚠️ تعذر الاتصال بـ OpenAI. تأكد من رصيد الـ API Key أو من تشغيل الـ VPN. تفاصيل الخطأ: {str(e)}"
 
 # ==========================================
 # --- 1. دالة التشفير الذكي ---
@@ -122,7 +123,7 @@ def smart_classify_columns(df):
     return categorical_cols, numeric_cols
 
 # ==========================================
-# واجهة المستخدم
+# واجهة المستخدم الأساسية
 # ==========================================
 st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
 st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً مسهباً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
@@ -180,7 +181,7 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة المحاور من القائمة الجانبية للبدء.")
         else:
-            # إضافة التبويب السابع الخاص بالذكاء الاصطناعي
+            # التبويبات السبعة
             tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
                 "👥 عينة الدراسة", 
                 "📊 الإحصاء الوصفي", 
@@ -234,7 +235,6 @@ if uploaded_file is not None:
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
-                # زر الذكاء الاصطناعي للإحصاء الوصفي
                 if api_key:
                     if st.button("✨ توليد قراءة ذكية لجدول المحاور", key="ai_desc"):
                         with st.spinner("جاري التحليل..."):
@@ -391,7 +391,7 @@ if uploaded_file is not None:
                             st.warning("عينة غير كافية للانحدار.")
 
             # ==========================================
-            # 7. التبويب الجديد: محلل الفرضيات الذكي (AI Engine)
+            # 7. التبويب السابع: محلل الفرضيات الذكي (AI Engine)
             with tab7:
                 st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
@@ -458,4 +458,3 @@ if uploaded_file is not None:
                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
     except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف: {e}")
-```
