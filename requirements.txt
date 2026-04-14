@@ -3,5 +3,5 @@ pandas
 plotly
 pingouin
 numpy
-openai
 openpyxl
+google-generativeai
