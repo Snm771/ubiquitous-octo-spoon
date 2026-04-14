@@ -3,4 +3,5 @@ pandas
 plotly
 pingouin
 numpy
-google-generativeai
+openpyxl
+huggingface_hub
