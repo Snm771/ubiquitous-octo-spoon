@@ -189,7 +189,8 @@ if uploaded_file is not None:
             ])
 
             # ==========================================
-            # 1. تبويب عينة الدراسة
+            # 1. تبويب عينة الدراسة ✅ مع إضافة المجموع الكلي
+            # ==========================================
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
@@ -200,9 +201,22 @@ if uploaded_file is not None:
                         percentages = df_encoded[col].value_counts(normalize=True) * 100
                         demo_df = pd.DataFrame({'التكرار': counts, 'النسبة (%)': percentages.round(2)})
                         
+                        # ✅ ✅ ✅ الإضافة الجديدة: صف المجموع الكلي ✅ ✅ ✅
+                        total_row = pd.DataFrame({
+                            'التكرار': [len(df_encoded)],
+                            'النسبة (%)': [100.00]
+                        }, index=['📊 المجموع الكلي ✓'])
+                        demo_df_with_total = pd.concat([demo_df, total_row])
+                        # ✅ ✅ ✅ نهاية الإضافة ✅ ✅ ✅
+                        
                         col1, col2 = st.columns(2)
-                        with col1: st.dataframe(demo_df, use_container_width=True)
-                        with col2: st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3, height=350), use_container_width=True)
+                        with col1: 
+                            # عرض الجدول مع المجموع الكلي
+                            st.dataframe(demo_df_with_total.style.set_properties(**{
+                                'background-color': '#e8f5e9'
+                            }, subset=pd.Index(['📊 المجموع الكلي ✓'])), use_container_width=True)
+                        with col2: 
+                            st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3, height=350), use_container_width=True)
                         
                         total_n = len(df_encoded)
                         top_cat = counts.idxmax()
@@ -217,12 +231,13 @@ if uploaded_file is not None:
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
-                                    st.success(get_table_explanation(demo_df.to_markdown(), f"توزيع العينة حسب {col}", api_key))
+                                    st.success(get_table_explanation(demo_df_with_total.to_markdown(), f"توزيع العينة حسب {col}", api_key))
                                     
                         st.markdown("---")
 
             # ==========================================
             # 2. تبويب الإحصاء الوصفي
+            # ==========================================
             with tab2:
                 st.subheader("📊 الإحصاء الوصفي (المتوسطات والانحرافات المعيارية)")
                 st.markdown("### 1️⃣ الإحصاء العام للمحاور والأبعاد")
@@ -254,6 +269,7 @@ if uploaded_file is not None:
 
             # ==========================================
             # 3. الثبات
+            # ==========================================
             with tab3:
                 st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
                 alpha_results = []
@@ -273,6 +289,7 @@ if uploaded_file is not None:
 
             # ==========================================
             # 4. دلالة الفروق
+            # ==========================================
             with tab4:
                 st.subheader("⚖️ دلالة الفروق (T-test و ANOVA)")
                 if categorical_cols and analysis_cols:
@@ -334,6 +351,7 @@ if uploaded_file is not None:
 
             # ==========================================
             # 5. الارتباط
+            # ==========================================
             with tab5:
                 st.subheader("🔗 قياس الارتباط بين المحاور (Pearson Correlation)")
                 if len(analysis_cols) >= 2:
@@ -366,6 +384,7 @@ if uploaded_file is not None:
 
             # ==========================================
             # 6. الانحدار
+            # ==========================================
             with tab6:
                 st.subheader("📈 تحليل الانحدار الخطي (التنبؤ والتأثير Regression)")
                 if len(analysis_cols) >= 2:
@@ -387,6 +406,7 @@ if uploaded_file is not None:
 
             # ==========================================
             # 7. التبويب السابع: محلل الفرضيات الذكي (AI Engine)
+            # ==========================================
             with tab7:
                 st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
