@@ -4,4 +4,4 @@ plotly
 pingouin
 numpy
 openpyxl
-huggingface_hub
+openai
