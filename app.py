@@ -4,32 +4,34 @@ import plotly.express as px
 import pingouin as pg
 import numpy as np
 
-# محاولة استيراد مكتبة Hugging Face بأمان
+# استيراد مكتبة OpenAI المستقرة جداً
 try:
-    from huggingface_hub import InferenceClient
+    from openai import OpenAI
 except ImportError:
-    st.warning("جاري إعداد مكتبة Hugging Face...")
+    st.warning("جاري إعداد المكتبات...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
 # ==========================================
-# --- دوال الذكاء الاصطناعي (Hugging Face AI Functions) ---
+# --- دوال الذكاء الاصطناعي (الخدعة: OpenAI Code + Hugging Face Servers) ---
 # ==========================================
-def run_hf(prompt, api_key):
+def run_ai(prompt, api_key):
     try:
-        # ✅ تم التصحيح هنا: استخدام token بدلاً من api_key
-        client = InferenceClient(token=api_key)
-        messages = [{"role": "user", "content": prompt}]
+        # توجيه مكتبة OpenAI للاتصال بسيرفرات Hugging Face المجانية باستخدام مفتاحك
+        client = OpenAI(
+            base_url="https://api-inference.huggingface.co/v1/",
+            api_key=api_key
+        )
         
-        response = client.chat_completion(
-            model="Qwen/Qwen2.5-7B-Instruct",
-            messages=messages,
+        response = client.chat.completions.create(
+            model="Qwen/Qwen2.5-7B-Instruct", # الموديل الجبار في اللغة العربية
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=1500,
             temperature=0.3
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"⚠️ خطأ في الاتصال بالذكاء الاصطناعي (Hugging Face): {e}"
+        return f"⚠️ خطأ في الاتصال بالذكاء الاصطناعي: {e}"
 
 def analyze_hypothesis_text(text, api_key):
     prompt = f"""
@@ -40,7 +42,7 @@ def analyze_hypothesis_text(text, api_key):
     - المتغير المستقل: (اسم المتغير)
     - المتغير التابع: (اسم المتغير)
     """
-    return run_hf(prompt, api_key)
+    return run_ai(prompt, api_key)
 
 def generate_detailed_explanation(results, hypothesis, api_key):
     prompt = f"""
@@ -59,7 +61,7 @@ def generate_detailed_explanation(results, hypothesis, api_key):
     
     اجعل اللغة أكاديمية، رصينة، واحترافية جداً باللغة العربية.
     """
-    return run_hf(prompt, api_key)
+    return run_ai(prompt, api_key)
 
 def get_table_explanation(table_string, context, api_key):
     prompt = f"""
@@ -68,7 +70,7 @@ def get_table_explanation(table_string, context, api_key):
     
     اكتب فقرة أكاديمية مسهبة تشرح أهم ما جاء في هذا الجدول، استخرج أعلى وأقل القيم، وفسر معناها في سياق البحث العلمي.
     """
-    return run_hf(prompt, api_key)
+    return run_ai(prompt, api_key)
 
 # ==========================================
 # --- 1. دالة التشفير الذكي ---
@@ -82,7 +84,6 @@ def encode_likert(df):
     }
     df_cleaned = df.copy()
     
-    # تنظيف النصوص برمجياً لتوافق كل إصدارات Pandas
     for col in df_cleaned.select_dtypes(include=['object']).columns:
         df_cleaned[col] = df_cleaned[col].apply(lambda x: str(x).strip() if pd.notnull(x) else x)
         
@@ -123,10 +124,10 @@ st.markdown("---")
 # سحب مفتاح الذكاء الاصطناعي تلقائياً
 # ==========================================
 if "HF_TOKEN" in st.secrets:
-    # إذا كان المفتاح مخزناً في السيرفر، استخدمه بصمت (لا يُظهر المربع)
+    # إذا كان المفتاح مخزناً في السيرفر، استخدمه بصمت
     api_key = st.secrets["HF_TOKEN"]
 else:
-    # إذا لم يكن موجوداً في السيرفر، أظهر مربع الإدخال في القائمة الجانبية كبديل
+    # إذا لم يكن موجوداً، أظهر مربع الإدخال في القائمة الجانبية كبديل
     st.sidebar.title("🤖 إعدادات الذكاء الاصطناعي")
     api_key = st.sidebar.text_input("🔑 مفتاح Hugging Face API:", type="password", help="ضع المفتاح هنا لتفعيل الشرح التوليدي والتبويب السابع")
 
@@ -217,7 +218,7 @@ if uploaded_file is not None:
                         
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
-                                with st.spinner("جاري صياغة التفسير الأكاديمي عبر الذكاء الاصطناعي..."):
+                                with st.spinner("جاري صياغة التفسير الأكاديمي..."):
                                     st.success(get_table_explanation(demo_df.to_markdown(), f"توزيع العينة حسب {col}", api_key))
                                     
                         st.markdown("---")
@@ -393,7 +394,7 @@ if uploaded_file is not None:
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
                 
                 if not api_key:
-                    st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية أو إضافته في إعدادات التطبيق لتفعيل هذه الميزة الحصرية.")
+                    st.error("⚠️ يرجى إدخال مفتاح API في القائمة الجانبية أو إضافته في إعدادات التطبيق لتفعيل هذه الميزة الحصرية.")
                 else:
                     user_hypothesis = st.text_area("✍️ أدخل نص الفرضية هنا:", "مثال: توجد علاقة ذات دلالة إحصائية بين جودة المعلومات والترويج للحدث.")
                     
