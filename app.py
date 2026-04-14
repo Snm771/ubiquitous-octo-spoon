@@ -211,10 +211,8 @@ if uploaded_file is not None:
                         
                         col1, col2 = st.columns(2)
                         with col1: 
-                            # عرض الجدول مع المجموع الكلي
-                            st.dataframe(demo_df_with_total.style.set_properties(**{
-                                'background-color': '#e8f5e9'
-                            }, subset=pd.Index(['📊 المجموع الكلي ✓'])), use_container_width=True)
+                            # ✅ عرض الجدول مع المجموع الكلي (بدون تعقيد لتجنب الأخطاء)
+                            st.dataframe(demo_df_with_total, use_container_width=True)
                         with col2: 
                             st.plotly_chart(px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.3, height=350), use_container_width=True)
                         
