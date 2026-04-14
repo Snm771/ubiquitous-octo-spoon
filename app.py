@@ -17,11 +17,17 @@ st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", p
 # ==========================================
 def run_hf(prompt, api_key):
     try:
-        # استخدام نموذج قوي ومجاني من Hugging Face
-        client = InferenceClient(model="mistralai/Mixtral-8x7B-Instruct-v0.1", token=api_key)
-        formatted_prompt = f"<s>[INST] {prompt} [/INST]"
-        response = client.text_generation(formatted_prompt, max_new_tokens=1500, temperature=0.3)
-        return response
+        # استخدام موديل Qwen الجبار والسريع جداً في اللغة العربية والمجاني دائماً
+        client = InferenceClient(api_key=api_key)
+        messages = [{"role": "user", "content": prompt}]
+        
+        response = client.chat_completion(
+            model="Qwen/Qwen2.5-7B-Instruct",
+            messages=messages,
+            max_tokens=1500,
+            temperature=0.3
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"⚠️ خطأ في الاتصال بالذكاء الاصطناعي (Hugging Face): {e}"
 
@@ -383,7 +389,7 @@ if uploaded_file is not None:
             # ==========================================
             # 7. التبويب السابع: محلل الفرضيات الذكي (AI Engine)
             with tab7:
-                st.header("🧠 المحلل الذكي للفرضيات (Hugging Face AI Engine)")
+                st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
                 
                 if not api_key:
