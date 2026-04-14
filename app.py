@@ -4,7 +4,7 @@ import plotly.express as px
 import pingouin as pg
 import numpy as np
 
-# استيراد مكتبة OpenAI المستقرة جداً
+# استيراد مكتبة OpenAI المستقرة جداً للربط مع سيرفرات Hugging Face
 try:
     from openai import OpenAI
 except ImportError:
@@ -13,13 +13,13 @@ except ImportError:
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
 
 # ==========================================
-# --- دوال الذكاء الاصطناعي (الخدعة: OpenAI Code + Hugging Face Servers) ---
+# --- دوال الذكاء الاصطناعي (الرابط المحدث لـ Hugging Face) ---
 # ==========================================
 def run_ai(prompt, api_key):
     try:
-        # توجيه مكتبة OpenAI للاتصال بسيرفرات Hugging Face المجانية باستخدام مفتاحك
+        # ✅ تم تحديث الرابط إلى router.huggingface.co
         client = OpenAI(
-            base_url="https://api-inference.huggingface.co/v1/",
+            base_url="https://router.huggingface.co/v1/",
             api_key=api_key
         )
         
@@ -124,10 +124,8 @@ st.markdown("---")
 # سحب مفتاح الذكاء الاصطناعي تلقائياً
 # ==========================================
 if "HF_TOKEN" in st.secrets:
-    # إذا كان المفتاح مخزناً في السيرفر، استخدمه بصمت
     api_key = st.secrets["HF_TOKEN"]
 else:
-    # إذا لم يكن موجوداً، أظهر مربع الإدخال في القائمة الجانبية كبديل
     st.sidebar.title("🤖 إعدادات الذكاء الاصطناعي")
     api_key = st.sidebar.text_input("🔑 مفتاح Hugging Face API:", type="password", help="ضع المفتاح هنا لتفعيل الشرح التوليدي والتبويب السابع")
 
@@ -394,7 +392,7 @@ if uploaded_file is not None:
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
                 
                 if not api_key:
-                    st.error("⚠️ يرجى إدخال مفتاح API في القائمة الجانبية أو إضافته في إعدادات التطبيق لتفعيل هذه الميزة الحصرية.")
+                    st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية أو إضافته في إعدادات التطبيق لتفعيل هذه الميزة الحصرية.")
                 else:
                     user_hypothesis = st.text_area("✍️ أدخل نص الفرضية هنا:", "مثال: توجد علاقة ذات دلالة إحصائية بين جودة المعلومات والترويج للحدث.")
                     
