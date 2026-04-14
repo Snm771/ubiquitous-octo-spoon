@@ -52,7 +52,7 @@ def generate_detailed_explanation(results, hypothesis, api_key):
     والفرضية التي تم اختبارها هي:
     "{hypothesis}"
 
-    اكتب تفسيراً أكاديمياً تفصيلياً (يصلح للنسخ المباشر في الفصل الرابع: مناقشة النتائج)، ويجب أن يشمل:
+    اكتب تفسيراً أكاديمياً تفصيلياً جداً (يصلح للنسخ المباشر في الفصل الرابع: مناقشة النتائج)، ويجب أن يشمل:
     1. قراءة وتفسير الأرقام في الجدول.
     2. تفسير كل قيمة علمياً (R Square, Beta, T/F value, P-value) حسب نوع الاختبار المجرى.
     3. تفسير اتجاه العلاقة أو حجم الأثر بشكل دقيق.
@@ -190,7 +190,7 @@ if uploaded_file is not None:
             ])
 
             # ==========================================
-            # 1. تبويب عينة الدراسة
+            # 1. تبويب عينة الدراسة ✅ مع الرسوم المتعددة والمجموع
             # ==========================================
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
@@ -202,7 +202,6 @@ if uploaded_file is not None:
                         percentages = df_encoded[col].value_counts(normalize=True) * 100
                         demo_df = pd.DataFrame({'التكرار': counts, 'النسبة (%)': percentages.round(2)})
                         
-                        # صف المجموع الكلي
                         total_row = pd.DataFrame({
                             'التكرار': [len(df_encoded)],
                             'النسبة (%)': [100.00]
@@ -212,37 +211,28 @@ if uploaded_file is not None:
                         col1, col2 = st.columns(2)
                         with col1: 
                             st.dataframe(demo_df_with_total, use_container_width=True)
-                            chart_type = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
+                            chart_type_demo = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
                             
                         with col2: 
-                            if chart_type == "دائري (Pie)":
+                            if chart_type_demo == "دائري (Pie)":
                                 fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
-                            elif chart_type == "أعمدة (Bar)":
+                            elif chart_type_demo == "أعمدة (Bar)":
                                 fig = px.bar(demo_df, x=demo_df.index, y='التكرار', text='التكرار', color=demo_df.index, height=350)
-                            elif chart_type == "دائري مجوف (Donut)":
+                            elif chart_type_demo == "دائري مجوف (Donut)":
                                 fig = px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.4, height=350)
-                            elif chart_type == "خطي (Line)":
+                            elif chart_type_demo == "خطي (Line)":
                                 fig = px.line(demo_df, x=demo_df.index, y='التكرار', markers=True, height=350)
                             else:
                                 fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
                             
                             st.plotly_chart(fig, use_container_width=True)
                         
-                        total_n = len(df_encoded)
-                        top_cat = counts.idxmax()
-                        top_val = counts.max()
-                        top_pct = percentages.max()
-                        bot_cat = counts.idxmin()
-                        bot_val = counts.min()
-                        bot_pct = percentages.min()
-
-                        st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({total_n}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({top_cat}) بتكرار بلغ ({top_val}) وبنسبة مئوية قدرها ({top_pct:.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير. في المقابل، جاءت فئة ({bot_cat}) كأقل الفئات تمثيلاً بتكرار ({bot_val}) ونسبة ({bot_pct:.1f}%). يُعد هذا التوصيف الديموغرافي محطة منهجية حيوية، حيث يبرز التباين أو التجانس في خصائص العينة، ويمنح الباحث مساحة موضوعية في تعميم النتائج وتفسير الفروق الإحصائية اللاحقة بناءً على هذا التوزيع الديموغرافي.")
+                        st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
                         
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
                                     st.success(get_table_explanation(demo_df_with_total.to_markdown(), f"توزيع العينة حسب {col}", api_key))
-                                    
                         st.markdown("---")
 
             # ==========================================
@@ -266,16 +256,8 @@ if uploaded_file is not None:
                     items_desc = items_desc.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                     st.dataframe(items_desc[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']].style.background_gradient(subset=['المتوسط'], cmap='Blues'), use_container_width=True)
 
-                st.markdown("### 3️⃣ المقارنة الوصفية بين الفئات")
-                if categorical_cols:
-                    comp_cat = st.selectbox("قسم النتائج بناءً على:", categorical_cols)
-                    comp_axis = st.selectbox("اختر المحور للمقارنة:", analysis_cols)
-                    grouped_desc = df_encoded.groupby(comp_cat)[comp_axis].agg(['count', 'mean', 'std']).reset_index()
-                    grouped_desc.columns = [comp_cat, 'العدد', 'المتوسط الحسابي', 'الانحراف المعياري']
-                    st.dataframe(grouped_desc.style.highlight_max(subset=['المتوسط الحسابي'], color='#d4edda'), use_container_width=True)
-                
                 st.markdown("### 📝 التفسير الأكاديمي:")
-                st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ، أو ممارسة قوية تجاه الفقرة أو المحور المدروس. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
+                st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
 
             # ==========================================
             # 3. الثبات
@@ -295,7 +277,7 @@ if uploaded_file is not None:
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
                     st.markdown("### 📝 التفسير الأكاديمي:")
-                    st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة عالية ومطمئنة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. ووفقاً للأدبيات المنهجية في البحث العلمي، فإن أي قيمة تتجاوز الحد المقبول (0.60) تعكس استقراراً في المقياس، وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
+                    st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
 
             # ==========================================
             # 4. دلالة الفروق
@@ -319,41 +301,34 @@ if uploaded_file is not None:
                                 st.markdown(f"**نوع الاختبار:** `T-test لعينتين مستقلتين`")
                                 g1 = res_data[res_data[g_col]==grps[0]][t_col].astype(float).values
                                 g2 = res_data[res_data[g_col]==grps[1]][t_col].astype(float).values
+                                res = pg.ttest(g1, g2)
+                                st.dataframe(res)
+                                pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
                                 
-                                if len(g1) < 2 or len(g2) < 2:
-                                    st.warning("⚠️ إحدى المجموعات عدد أفرادها قليل جداً ولا يمكن إجراء الاختبار.")
-                                else:
-                                    res = pg.ttest(g1, g2)
-                                    st.dataframe(res)
-                                    pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
-                                    
-                                    st.markdown("### 📝 التفسير الأكاديمي:")
-                                    if pval < 0.05: 
-                                        st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
-                                        st.info(f"أشارت مخرجات اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) إلى وجود فروق جوهرية ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين فئات المتغير المستقل ({g_col}) فيما يتعلق بمحور ({t_col}). يعكس هذا التباين بشكل جلي تأثير الخصائص الديموغرافية للفئة على اتجاهات واستجابات المبحوثين.")
-                                    else: 
-                                        st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
-                                        st.info(f"بينت نتائج اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) عدم ثبوت أي فروق ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة باختلاف فئاتهم في متغير ({g_col}) تجاه محور ({t_col}). يُفسر هذا إحصائياً بوجود حالة من التجانس والتقارب الكبير في آراء واتجاهات المبحوثين بغض النظر عن اختلاف تصنيفاتهم.")
+                                st.markdown("### 📝 التفسير الأكاديمي:")
+                                if pval < 0.05: 
+                                    st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
+                                    st.info(f"أشارت مخرجات اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) إلى وجود فروق جوهرية ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين فئات المتغير المستقل ({g_col}) فيما يتعلق بمحور ({t_col}). يعكس هذا التباين بشكل جلي تأثير الخصائص الديموغرافية للفئة على اتجاهات واستجابات المبحوثين.")
+                                else: 
+                                    st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
+                                    st.info(f"بينت نتائج اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) عدم ثبوت أي فروق ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة باختلاف فئاتهم في متغير ({g_col}) تجاه محور ({t_col}). يُفسر هذا إحصائياً بوجود حالة من التجانس والتقارب الكبير في آراء واتجاهات المبحوثين بغض النظر عن اختلاف تصنيفاتهم.")
                                     
                             elif len(grps) > 2:
                                 st.markdown(f"**نوع الاختبار:** `تحليل التباين الأحادي (ANOVA)`")
                                 counts = res_data[g_col].value_counts()
                                 valid_grps = counts[counts >= 2].index
-                                if len(valid_grps) < 2:
-                                    st.warning("⚠️ المجموعات لا تحتوي على عدد كافٍ لإجراء ANOVA.")
-                                else:
-                                    clean_anova = res_data[res_data[g_col].isin(valid_grps)]
-                                    res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
-                                    st.dataframe(res)
-                                    pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
-                                    
-                                    st.markdown("### 📝 التفسير الأكاديمي:")
-                                    if pval < 0.05: 
-                                        st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
-                                        st.info(f"أظهرت المعطيات الإحصائية المستخلصة من تحليل التباين الأحادي (One-Way ANOVA) وجود فروق ذات دلالة إحصائية واضحة عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة تُعزى للتصنيفات المختلفة في متغير ({g_col}) ضمن محور ({t_col}). وهذا يؤكد أن المتغير الديموغرافي يلعب دوراً محورياً وجوهرياً في تشكيل آراء المبحوثين وتوجيه استجاباتهم.")
-                                    else: 
-                                        st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
-                                        st.info(f"أوضحت المخرجات الإحصائية لتحليل التباين الأحادي (One-Way ANOVA) عدم وجود أي فروق ذات دلالة إحصائية عند مستوى الدلالة المرجعي ($\le 0.05$) بين فئات متغير ({g_col}) فيما يتعلق بتقييمهم لمحور ({t_col}). يعكس هذا الاستقرار الإحصائي إجماعاً عاماً وتوافقاً ملحوظاً من قبل أفراد العينة على فقرات هذا المحور.")
+                                clean_anova = res_data[res_data[g_col].isin(valid_grps)]
+                                res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
+                                st.dataframe(res)
+                                pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
+                                
+                                st.markdown("### 📝 التفسير الأكاديمي:")
+                                if pval < 0.05: 
+                                    st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
+                                    st.info(f"أظهرت المعطيات الإحصائية المستخلصة من تحليل التباين الأحادي (One-Way ANOVA) وجود فروق ذات دلالة إحصائية واضحة عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة تُعزى للتصنيفات المختلفة في متغير ({g_col}) ضمن محور ({t_col}). وهذا يؤكد أن المتغير الديموغرافي يلعب دوراً محورياً وجوهرياً في تشكيل آراء المبحوثين وتوجيه استجاباتهم.")
+                                else: 
+                                    st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
+                                    st.info(f"أوضحت المخرجات الإحصائية لتحليل التباين الأحادي (One-Way ANOVA) عدم وجود أي فروق ذات دلالة إحصائية عند مستوى الدلالة المرجعي ($\le 0.05$) بين فئات متغير ({g_col}) فيما يتعلق بتقييمهم لمحور ({t_col}). يعكس هذا الاستقرار الإحصائي إجماعاً عاماً وتوافقاً ملحوظاً من قبل أفراد العينة على فقرات هذا المحور.")
                                     
                             st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
                         except Exception as e: 
@@ -370,26 +345,22 @@ if uploaded_file is not None:
                     if v1 != v2:
                         try:
                             clean_corr = df_encoded[[v1, v2]].apply(pd.to_numeric, errors='coerce').dropna()
-                            if len(clean_corr) > 2:
-                                corr_res = pg.corr(clean_corr[v1], clean_corr[v2], method='pearson')
-                                st.dataframe(corr_res[['n', 'r', 'p-val'] if 'p-val' in corr_res.columns else corr_res.columns])
+                            corr_res = pg.corr(clean_corr[v1], clean_corr[v2], method='pearson')
+                            st.dataframe(corr_res[['n', 'r', 'p-val'] if 'p-val' in corr_res.columns else corr_res.columns])
+                            pval = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else (corr_res['p-value'].values[0] if 'p-value' in corr_res.columns else 1.0)
+                            rval = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
+                            
+                            st.markdown("### 📝 التفسير الأكاديمي:")
+                            if pval < 0.05: 
+                                direction = "طردية (إيجابية)" if rval > 0 else "عكسية (سلبية)"
+                                strength = "قوية جداً" if abs(rval) > 0.8 else ("قوية" if abs(rval) > 0.6 else ("متوسطة" if abs(rval) > 0.4 else "ضعيفة"))
+                                st.success(f"✅ **توجد علاقة ارتباط دالة إحصائياً.**")
+                                st.info(f"أسفرت نتائج التحليل الإحصائي باستخدام معامل ارتباط بيرسون عن الكشف عن وجود علاقة ارتباط {direction} و{strength} ذات دلالة إحصائية قاطعة عند مستوى الدلالة ($\le 0.05$) بين محور ({v1}) ومحور ({v2}). يُستدل من هذه النتيجة العلمية الدقيقة على وجود تلازم حركي وتأثير متبادل بين المتغيرين في بيئة الدراسة.")
+                            else: 
+                                st.warning("⚠️ **لا توجد علاقة ارتباط دالة إحصائياً.**")
+                                st.info(f"أظهرت معطيات اختبار بيرسون للارتباط الخطي عدم ثبوت أي علاقة ارتباطية ذات دلالة إحصائية بين محور ({v1}) ومحور ({v2}) عند مستوى الدلالة المعتمد ($\le 0.05$). يشير هذا الانعدام في الارتباط الخطي إلى استقلالية تامة لكل متغير عن الآخر ضمن سياق عينة الدراسة الحالية.")
                                 
-                                pval = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else (corr_res['p-value'].values[0] if 'p-value' in corr_res.columns else 1.0)
-                                rval = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
-                                
-                                st.markdown("### 📝 التفسير الأكاديمي:")
-                                if pval < 0.05: 
-                                    direction = "طردية (إيجابية)" if rval > 0 else "عكسية (سلبية)"
-                                    strength = "قوية جداً" if abs(rval) > 0.8 else ("قوية" if abs(rval) > 0.6 else ("متوسطة" if abs(rval) > 0.4 else "ضعيفة"))
-                                    st.success(f"✅ **توجد علاقة ارتباط دالة إحصائياً.**")
-                                    st.info(f"أسفرت نتائج التحليل الإحصائي باستخدام معامل ارتباط بيرسون عن الكشف عن وجود علاقة ارتباط {direction} و{strength} ذات دلالة إحصائية قاطعة عند مستوى الدلالة ($\le 0.05$) بين محور ({v1}) ومحور ({v2}). يُستدل من هذه النتيجة العلمية الدقيقة على وجود تلازم حركي وتأثير متبادل بين المتغيرين في بيئة الدراسة؛ فكلما شهد المتغير الأول تغيراً، تبعه تغير ملحوظ وموازٍ في المتغير الثاني بالاتجاه الـ{direction}.")
-                                else: 
-                                    st.warning("⚠️ **لا توجد علاقة ارتباط دالة إحصائياً.**")
-                                    st.info(f"أظهرت معطيات اختبار بيرسون للارتباط الخطي عدم ثبوت أي علاقة ارتباطية ذات دلالة إحصائية بين محور ({v1}) ومحور ({v2}) عند مستوى الدلالة المعتمد ($\le 0.05$). يشير هذا الانعدام في الارتباط الخطي إلى استقلالية تامة لكل متغير عن الآخر ضمن سياق عينة الدراسة الحالية.")
-                                    
-                                st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
-                            else:
-                                st.warning("بيانات غير كافية للارتباط.")
+                            st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
                         except: st.error("تعذر حساب الارتباط.")
 
             # ==========================================
@@ -407,12 +378,9 @@ if uploaded_file is not None:
                                 lm = pg.linear_regression(reg_data[indep_vars], reg_data[dep_var])
                                 st.dataframe(lm)
                                 r2 = lm['r2'].values[0] if 'r2' in lm.columns else 0
-                                
                                 st.markdown("### 📝 التفسير الأكاديمي:")
-                                st.info(f"سعياً للتحقق من القدرة التنبؤية للمتغيرات المستقلة ومعرفة حجم أثرها الفعلي، تم إجراء تحليل الانحدار الخطي (Linear Regression) لقياس أثر المتغيرات المُدخلة على المتغير التابع ({dep_var}). وتشير المخرجات الإحصائية إلى أن النموذج المقترح يمتلك قدرة تفسيرية ملحوظة. استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$)، يمكن الاستنتاج علمياً بأن المتغيرات المستقلة المُدرجة قادرة مجتمعة على تفسير والتحكم بما نسبته **({float(r2)*100:.1f}%)** من إجمالي التباين الحاصل في المتغير التابع.")
+                                st.info(f"سعياً للتحقق من القدرة التنبؤية للمتغيرات المستقلة ومعرفة حجم أثرها الفعلي، تم إجراء تحليل الانحدار الخطي لقياس أثر المتغيرات المُدخلة على المتغير التابع ({dep_var}). وتشير المخرجات الإحصائية إلى أن النموذج المقترح يمتلك قدرة تفسيرية ملحوظة. استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$)، يمكن الاستنتاج علمياً بأن المتغيرات المستقلة المُدرجة قادرة مجتمعة على تفسير والتحكم بما نسبته **({float(r2)*100:.1f}%)** من إجمالي التباين الحاصل في المتغير التابع.")
                             except: st.error("حدث خطأ في الانحدار.")
-                        else:
-                            st.warning("عينة غير كافية للانحدار.")
 
             # ==========================================
             # 7. التبويب السابع: محلل الفرضيات الذكي
@@ -425,35 +393,26 @@ if uploaded_file is not None:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية أو إضافته في إعدادات التطبيق.")
                 else:
                     user_hypothesis = st.text_area("✍️ أدخل نص الفرضية هنا:", "مثال: توجد علاقة ذات دلالة إحصائية بين جودة المعلومات والترويج للحدث.")
-                    
                     if st.button("🔍 تحليل الفرضية آلياً"):
                         with st.spinner("جاري فهم الفرضية عبر الذكاء الاصطناعي..."):
                             try:
                                 st.session_state['ai_analysis'] = analyze_hypothesis_text(user_hypothesis, api_key)
                             except Exception as e:
                                 st.error(f"خطأ في الاتصال بالذكاء الاصطناعي: {e}")
-                    
                     if 'ai_analysis' in st.session_state:
                         st.success("تم تحليل الفرضية بنجاح:")
                         st.info(st.session_state['ai_analysis'])
                     
                     st.markdown("---")
-                    st.markdown("#### ⚙️ تنفيذ الاختبار وتوليد مناقشة النتائج")
-                    
                     col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"])
-                    
-                    if "فروق" in col_type:
-                        h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols)
-                    else:
-                        h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols)
-                        
+                    if "فروق" in col_type: h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols)
+                    else: h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols)
                     h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
                     
                     if st.button("🚀 تنفيذ وكتابة مناقشة النتائج (الفصل الرابع)"):
-                        with st.spinner("جاري إجراء الاختبار وتأليف التفسير الأكاديمي عبر الذكاء الاصطناعي..."):
+                        with st.spinner("جاري إجراء الاختبار وتأليف التفسير الأكاديمي..."):
                             clean_df = df_encoded[[h_indep, h_dep]].dropna()
                             results_str = ""
-                            
                             try:
                                 if "علاقة" in col_type:
                                     res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
@@ -465,8 +424,7 @@ if uploaded_file is not None:
                                     st.dataframe(res)
                                 elif "فروق" in col_type:
                                     grps = clean_df[h_indep].unique()
-                                    if len(grps) == 2:
-                                        res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
+                                    if len(grps) == 2: res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
                                     else:
                                         valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
                                         res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
@@ -474,46 +432,45 @@ if uploaded_file is not None:
                                     st.dataframe(res)
                                 
                                 final_explanation = generate_detailed_explanation(results_str, user_hypothesis, api_key)
-                                
                                 st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
                                 st.success(final_explanation)
-                                
                             except Exception as e:
                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
             # ==========================================
-            # 8. التبويب الثامن: النتائج والتوصيات (مفصولة ومرقمة) ✅
+            # 8. التبويب الثامن: النتائج والتوصيات (مفصولة) ✅ 
             # ==========================================
             with tab8:
                 st.header("🎯 النتائج والتوصيات الذكية")
                 
-                # --- دالة تحديد المستوى ---
+                # دالة مساعدة لتحديد المستوى
                 def get_level(mean_val):
                     if mean_val >= 3.68: return "مرتفع"
                     if mean_val >= 2.34: return "متوسط"
                     return "منخفض"
 
-                # ----------------------------------
-                # القسم الأول: النتائج (مرقمة)
-                # ----------------------------------
+                # ---------------------------------------------------------
+                # القسم الأول: أبرز نتائج الدراسة (مرقمة + رسم بياني متعدد)
+                # ---------------------------------------------------------
                 st.markdown("### 📌 أولاً: أبرز نتائج الدراسة")
                 result_counter = 1
                 
-                # 1. نتائج العينة (الديموغرافية)
+                # 1. الديموغرافيا
                 if categorical_cols:
                     for col in categorical_cols:
                         top_cat = df_encoded[col].value_counts().idxmax()
-                        st.markdown(f"**النتيجة ({result_counter}):** الفئة الأعلى في متغير ({col}) هي فئة ({top_cat}).")
+                        st.markdown(f"**النتيجة ({result_counter}):** الفئة الأعلى تمثيلاً في متغير ({col}) هي فئة ({top_cat}).")
                         result_counter += 1
                         
-                # 2. نتيجة الثبات (كرونباخ)
+                # 2. الثبات
                 if len(active_questions) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
                     st.markdown(f"**النتيجة ({result_counter}):** بلغ معامل الثبات الكلي (ألفا كرونباخ) لأداة الدراسة ({round(a_total, 3)}).")
                     result_counter += 1
-
-                # 3. نتائج المحاور والمستويات
-                dim_recs = [] # لحفظ التوصيات لاحقاً
+                    
+                # 3. المحاور (مستويات التقييم)
+                dim_recs = [] # لتخزين التوصيات للقسم الثاني
+                dim_means_data = [] # لتخزين بيانات الرسم البياني
                 
                 for dim_name, cols in dimensions_dict.items():
                     if cols:
@@ -521,30 +478,53 @@ if uploaded_file is not None:
                         overall_mean = item_means.mean()
                         level = get_level(overall_mean)
                         
-                        high_item = item_means.idxmax()
-                        low_item = item_means.idxmin()
-                        
-                        st.markdown(f"**النتيجة ({result_counter}):** جاء محور ({dim_name}) بمستوى تقييم ({level})، حيث كانت أعلى فقرة هي '{high_item}' وأقل فقرة هي '{low_item}'.")
+                        dim_means_data.append({"المحور": dim_name, "المتوسط": round(overall_mean, 2)})
+                        st.markdown(f"**النتيجة ({result_counter}):** جاء محور ({dim_name}) بمستوى تقييم ({level}) بمتوسط حسابي ({round(overall_mean, 2)}).")
                         result_counter += 1
                         
-                        # --- بناء التوصيات لنفس المحور (شرط 3.50) ---
+                        # تجهيز التوصيات للقسم الثاني (بنفس شرط 3.50 الخاص بك)
                         low_items = item_means[item_means <= 3.50]
                         if not low_items.empty:
                             for item_text, mean_val in low_items.items():
-                                dim_recs.append(f"توصي الدراسة بضرورة تحسين '{item_text}' ورفع مستواه، حيث أنه يمثل نقطة ضعف حالية.")
+                                dim_recs.append({
+                                    "المحور": dim_name,
+                                    "المتوسط": round(mean_val, 2),
+                                    "التوصية": f"توصي الدراسة بضرورة تحسين ({item_text}) من خلال تطوير الممارسات المرتبطة بها، والعمل على رفع مستواها بما يسهم في تعزيز الأداء وتحقيق نتائج أفضل."
+                                })
                         else:
-                            dim_recs.append(f"توصي الدراسة بضرورة المحافظة على '{low_item}' وتعزيزه بشكل مستمر.")
+                            lowest_item_text = item_means.idxmin()
+                            lowest_mean_val = item_means.min()
+                            dim_recs.append({
+                                "المحور": dim_name,
+                                "المتوسط": round(lowest_mean_val, 2),
+                                "التوصية": f"توصي الدراسة بضرورة المحافظة على مستوى ({lowest_item_text}) والعمل على تعزيزه بشكل مستمر، لما له من دور مهم في دعم هذا البعد وتحقيق الكفاءة المطلوبة."
+                            })
+
+                # 📊 الرسم البياني المتعدد لنتائج المحاور (تمت الإضافة هنا)
+                if dim_means_data:
+                    st.markdown("#### 📊 مستويات المحاور (رسم بياني)")
+                    dim_df = pd.DataFrame(dim_means_data)
+                    chart_type_res = st.radio("اختر نوع الرسم للنتائج:", ["أعمدة (Bar)", "دائري (Pie)", "خطي (Line)"], horizontal=True)
+                    
+                    if chart_type_res == "أعمدة (Bar)":
+                        fig_res = px.bar(dim_df, x="المحور", y="المتوسط", text="المتوسط", color="المحور", height=400)
+                    elif chart_type_res == "دائري (Pie)":
+                        fig_res = px.pie(dim_df, names="المحور", values="المتوسط", hole=0.3, height=400)
+                    else:
+                        fig_res = px.line(dim_df, x="المحور", y="المتوسط", markers=True, height=400)
+                        
+                    st.plotly_chart(fig_res, use_container_width=True)
 
                 st.markdown("---")
                 
-                # ----------------------------------
-                # القسم الثاني: التوصيات الذكية
-                # ----------------------------------
-                st.markdown("### 💡 ثانياً: التوصيات الذكية (بناءً على معيار $\le 3.50$)")
+                # ---------------------------------------------------------
+                # القسم الثاني: التوصيات الذكية 
+                # ---------------------------------------------------------
+                st.markdown("### 💡 ثانياً: التوصيات الذكية (بناءً على المتوسطات الحسابية)")
                 if dim_recs:
                     for idx, rec in enumerate(dim_recs, 1):
-                        st.info(f"**{idx}.** {rec}")
+                        st.info(f"**{idx}. المحور:** {rec['المحور']} | **المتوسط:** {rec['المتوسط']}\n\n📌 {rec['التوصية']}")
                 else:
-                    st.success("لا توجد توصيات حالياً. تأكد من تحديد الأسئلة في القائمة الجانبية.")
+                    st.success("لا توجد بيانات كافية لاستخراج التوصيات حالياً. تأكد من تحديد الأسئلة في القائمة الجانبية.")
 
     except Exception as e: st.error(f"حدث خطأ أثناء قراءة الملف. تأكد من أن الملف ليس فارغاً وأن صيغته صحيحة. التفاصيل: {e}")
