@@ -11,11 +11,16 @@ except ImportError:
     st.warning("جاري إعداد المكتبات...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
+# --- تعريف كافة مفاتيح الذاكرة لمنع الأخطاء ---
 if 'hypothesis_history' not in st.session_state:
     st.session_state['hypothesis_history'] = []
-    
-if 'hypothesis_history' not in st.session_state:
-    st.session_state['hypothesis_history'] = []
+if 'sample_results' not in st.session_state:
+    st.session_state['sample_results'] = []
+if 'reliability_result' not in st.session_state:
+    st.session_state['reliability_result'] = ""
+if 'dim_recs' not in st.session_state:
+    st.session_state['dim_recs'] = []
+# 👆==============================👆
 # ==========================================
 # 🌍 1. نظام اللغات والتنسيق المتقدم (RTL / LTR)
 # ==========================================
@@ -266,7 +271,11 @@ if uploaded_file is not None:
                             st.plotly_chart(fig, use_container_width=True)
                         
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
-                        
+                        # 👇=== أضف هذا الكود للحفظ بصمت ===👇
+                        res_txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({counts.idxmax()}) بنسبة ({percentages.max():.1f}%)."
+                        if res_txt not in st.session_state['sample_results']:
+                            st.session_state['sample_results'].append(res_txt)
+                        # 👆==============================👆
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
@@ -311,7 +320,10 @@ if uploaded_file is not None:
                 if len(active_questions) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
                     alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
-                
+                # 👇=== أضف هذا الكود للحفظ بصمت ===👇
+                    eval_text = "جيد" if a_total >= 0.7 else "ضعيف"
+                    st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({eval_text}) من الثبات الداخلي."
+                    # 👆==============================👆
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
                     st.markdown("### 📝 التفسير الأكاديمي:")
@@ -511,73 +523,86 @@ if uploaded_file is not None:
                                         except Exception as e:
                                             st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
-           # ==========================================
-            # 8. تبويب النتائج (مستقل وبدون رسوم بيانية) ✅
+          # ==========================================
+            # 8. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
             # ==========================================
             with tab8:
-                st.header("📌 أبرز نتائج الدراسة" if lang=="العربية" else "📌 Key Results")
+                st.header("📌 أبرز نتائج الدراسة")
+                res_idx = 1
                 
-                def get_level(mean_val):
-                    if mean_val >= 3.68: return "مرتفع" if lang=="العربية" else "High"
-                    if mean_val >= 2.34: return "متوسط" if lang=="العربية" else "Medium"
-                    return "منخفض" if lang=="العربية" else "Low"
+                # --- 1️⃣ نتيجة عينة الدراسة (النتيجة رقم 1) ---
+                st.subheader("📊 نتائج وصف عينة الدراسة")
+                if st.session_state['sample_results']:
+                    for res in st.session_state['sample_results']:
+                        st.markdown(f"**النتيجة ({res_idx}):** {res}")
+                        res_idx += 1
+                else:
+                    st.info("⚠️ يرجى زيارة تبويب (عينة الدراسة) أولاً لتوليد النتائج.")
+                
+                st.markdown("---")
 
-                result_counter = 1
+                # --- 2️⃣ نتيجة الثبات (النتيجة رقم 2) ---
+                st.subheader("🧪 نتائج ثبات أداة الدراسة")
+                if st.session_state['reliability_result']:
+                    st.markdown(f"**النتيجة ({res_idx}):** {st.session_state['reliability_result']}")
+                    res_idx += 1
+                else:
+                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد النتائج.")
                 
-                # 1. الديموغرافيا
-                if categorical_cols:
-                    for col in categorical_cols:
-                        top_cat = df_encoded[col].value_counts().idxmax()
-                        txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({top_cat})، حيث سجلت النسبة الأعلى مقارنة ببقية الفئات." if lang=="العربية" else f"Top category in ({col}) is ({top_cat})."
-                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
-                        result_counter += 1
+                st.markdown("---")
+
+                # --- 3️⃣ نتائج الفرضيات (النتائج من 3 إلى 7) ---
+                st.subheader("⚖️ نتائج اختبار فرضيات الدراسة")
+                if st.session_state['hypothesis_history']:
+                    # عرض أول 5 فرضيات لتكملة الرقم 7
+                    for h in st.session_state['hypothesis_history'][:5]:
+                        decision = "تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية"
+                        st.markdown(f"**النتيجة ({res_idx}):** {decision} ({h['text']}).")
                         
-                # 2. الثبات
-                if len(active_questions) > 1:
-                    a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
-                    txt = f"بلغ معامل كرونباخ ألفا ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({'جيد' if a_total >= 0.7 else 'ضعيف'}) من الثبات الداخلي." if lang=="العربية" else f"Cronbach's Alpha is ({round(a_total, 3)})."
-                    st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
-                    result_counter += 1
-                    
-                # 3. المحاور (مستويات التقييم فقط نص)
-                dim_recs = [] # لتجهيز التوصيات لتبويب 9
+                        # الشرح الأكاديمي الثابت
+                        with st.expander(f"📝 عرض الشرح الأكاديمي للنتيجة ({res_idx})"):
+                            st.info("""
+                            تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم.
+                            وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة.
+                            كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار.
+                            وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة.
+                            ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال.
+                            وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.
+                            """)
+                        res_idx += 1
+                else:
+                    st.warning("⚠️ لم يتم اختبار أي فرضيات بعد في تبويب (محلل الفرضيات).")
+
+                # --- تفريغ وتوليد التوصيات بصمت في الذاكرة ---
+                st.session_state['dim_recs'] = [] 
                 for dim_name, cols in dimensions_dict.items():
                     if cols:
                         item_means = df_encoded[cols].mean()
                         overall_mean = item_means.mean()
-                        level = get_level(overall_mean)
-                        txt = f"جاء محور ({dim_name}) بمستوى تقييم ({level}) بمتوسط حسابي ({round(overall_mean, 2)})." if lang=="العربية" else f"Dimension ({dim_name}) achieved ({level}) level with mean ({round(overall_mean, 2)})."
-                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
-                        result_counter += 1
-                        
-                        # تجهيز التوصيات لتبويب 9
-                        lows = item_means[item_means <= 3.50]
-                        if not lows.empty:
-                            for item_text, mean_val in lows.items():
-                                dim_recs.append({"dim": dim_name, "mean": round(mean_val, 2), "rec": f"توصي الدراسة بضرورة تحسين ({item_text}) ورفع مستواه لتطوير الأداء." if lang=="العربية" else f"Improve ({item_text})."})
+                        low_items = item_means[item_means <= 3.50]
+                        if not low_items.empty:
+                            for item_text, mean_val in low_items.items():
+                                st.session_state['dim_recs'].append({
+                                    "dim": dim_name, "mean": round(mean_val, 2),
+                                    "rec": f"توصي الدراسة بضرورة تحسين ({item_text}) ورفع مستواه لتطوير الأداء."
+                                })
                         else:
-                            dim_recs.append({"dim": dim_name, "mean": round(item_means.min(), 2), "rec": f"توصي الدراسة بضرورة المحافظة على ({item_means.idxmin()}) وتعزيزه." if lang=="العربية" else f"Maintain ({item_means.idxmin()})."})
-
-                # 4. الفرضيات
-                if 'hypothesis_history' in st.session_state and st.session_state['hypothesis_history']:
-                    st.markdown("---")
-                    st.markdown("#### ⚖️ نتائج اختبار الفرضيات" if lang=="العربية" else "#### ⚖️ Hypotheses Results")
-                    for h in st.session_state['hypothesis_history']:
-                        d_str = ("تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية") if lang=="العربية" else ("Accepted" if h['result'] == "accepted" else "Rejected")
-                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {d_str} ({h['text']}).")
-                        if lang=="العربية":
-                            st.info("تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم. وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة. كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار. وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة. ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال. وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.")
-                        result_counter += 1
+                            st.session_state['dim_recs'].append({
+                                "dim": dim_name, "mean": round(item_means.min(), 2),
+                                "rec": f"توصي الدراسة بضرورة المحافظة على مستوى ({item_means.idxmin()}) وتعزيزه."
+                            })
 
             # ==========================================
-            # 9. التوصيات (تبويب مستقل) ✅
+            # 9. التبويب التاسع: التوصيات (مستقل تماماً) ✅
             # ==========================================
             with tab9:
-                st.header("💡 التوصيات الذكية" if lang=="العربية" else "💡 Smart Recommendations")
-                if dim_recs:
-                    for idx, rec in enumerate(dim_recs, 1):
-                        st.success(f"**{idx}. {'المحور' if lang=='العربية' else 'Dim'}:** {rec['dim']} | **{'المتوسط' if lang=='العربية' else 'Mean'}:** {rec['mean']}\n\n📌 {rec['rec']}")
+                st.header("💡 التوصيات الذكية")
+                
+                if st.session_state['dim_recs']:
+                    for idx, rec in enumerate(st.session_state['dim_recs'], 1):
+                        st.success(f"**{idx}. المحور:** {rec['dim']} | **المتوسط:** {rec['mean']}\n\n📌 {rec['rec']}")
                 else:
-                    st.warning("لا توجد توصيات حالياً. تأكد من تحديد الأسئلة واختبار المحاور." if lang=="العربية" else "No recommendations yet.")
+                    st.warning("⚠️ يرجى زيارة تبويب (النتائج) أولاً لتوليد التوصيات.")
 
-    except Exception as e: st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
+    except Exception as e: 
+        st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
