@@ -236,20 +236,9 @@ def smart_classify_columns(df):
 # ==========================================
 # واجهة المستخدم الأساسية
 # ==========================================
-# استخدم الدالة tr لترجمة العنوان الرئيسي
-st.title(tr("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي", "📊 SmartStat Pro - Automated Statistical Expert"))
-
-# استخدم الدالة tr لترجمة الوصف
-st.markdown(tr(
-    "يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.", 
-    "The system now attaches an **academic explanation** with every statistical result, ready for direct copying into the discussion chapters."
-))
+st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
+st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
 st.markdown("---")
-
-# ... (كود مفتاح API يبقى كما هو) ...
-
-# استخدم الدالة tr لترجمة منطقة رفع الملفات
-uploaded_file = st.file_uploader(tr("قم برفع ملف البيانات الخام (CSV أو Excel)", "Upload raw data file (CSV or Excel)"), type=["csv", "xlsx"])
 
 # ==========================================
 # سحب مفتاح الذكاء الاصطناعي تلقائياً
