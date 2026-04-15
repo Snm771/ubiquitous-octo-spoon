@@ -10,10 +10,18 @@ try:
 except ImportError:
     st.warning("جاري إعداد المكتبات...")
 
-st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
-st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
+# إعداد الصفحة (سطر واحد فقط يكفي)
+st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide") [cite: 13]
+
+# --- تعريف كافة مفاتيح الذاكرة لمنع الأخطاء ---
 if 'sample_results' not in st.session_state:
-    st.session_state['sample_results'] = []
+    st.session_state['sample_results'] = [] [cite: 15]
+
+if 'reliability_result' not in st.session_state:
+    st.session_state['reliability_result'] = "" # لحفظ نتيجة الثبات [cite: 43]
+
+if 'hypothesis_history' not in st.session_state:
+    st.session_state['hypothesis_history'] = [] # لحفظ نتائج الفرضيات الـ 7 [cite: 105]
 
 # ==========================================
 # أضف هذين السطرين هنا لإصلاح الخطأ 👇
@@ -228,7 +236,7 @@ if uploaded_file is not None:
             ]
             tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(tabs_names)
 
-            # ==========================================
+           # ==========================================
             # 1. تبويب عينة الدراسة ✅ مع الرسوم المتعددة والمجموع
             # ==========================================
             with tab1:
@@ -268,6 +276,14 @@ if uploaded_file is not None:
                         
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
 
+                        # 👇=== تمت إضافة هذا الكود للحفظ الصامت للنتيجة ===👇
+                        if 'sample_results' not in st.session_state:
+                            st.session_state['sample_results'] = []
+                        
+                        res_txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({counts.idxmax()}) بنسبة ({percentages.max():.1f}%)."
+                        if res_txt not in st.session_state['sample_results']:
+                            st.session_state['sample_results'].append(res_txt)
+                        # 👆===============================================👆
                         
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
@@ -299,8 +315,8 @@ if uploaded_file is not None:
                 st.markdown("### 📝 التفسير الأكاديمي:")
                 st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
 
-            # ==========================================
-            # 3. الثبات
+           # ==========================================
+            # 3. الثبات (مع الحفظ التلقائي للنتيجة رقم 2)
             # ==========================================
             with tab3:
                 st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
@@ -314,15 +330,15 @@ if uploaded_file is not None:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
                     alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
 
-                # 👇=== أضف هذا الكود هنا للحفظ فقط ===👇
+                    # 👇=== كود حفظ النتيجة رقم 2 في الذاكرة بصمت ===👇
                     eval_text = "جيد" if a_total >= 0.7 else "ضعيف"
                     st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({eval_text}) من الثبات الداخلي."
-                    # 👆================================👆
+                    # 👆==========================================👆
+
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
                     st.markdown("### 📝 التفسير الأكاديمي:")
                     st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
-
             # ==========================================
             # 4. دلالة الفروق
             # ==========================================
@@ -517,51 +533,59 @@ if uploaded_file is not None:
                                         except Exception as e:
                                             st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
-         # ==========================================
-# 8. النتائج (تبويب مستقل ومنظم بالأرقام) ✅
 # ==========================================
-with tab8:
-    st.header("📌 أبرز نتائج الدراسة" if lang=="العربية" else "📌 Key Results")
-    res_idx = 1
-    
-    # --- النتيجة 1: عينة الدراسة ---
-    st.subheader("1️⃣ نتائج عينة الدراسة")
-    if 'sample_results' in st.session_state:
-        for res in st.session_state['sample_results']:
-            st.markdown(f"**النتيجة ({res_idx}):** {res}")
-            res_idx += 1
-    else:
-        st.write("يرجى فحص تبويب عينة الدراسة أولاً.")
+            # 8. التبويب الثامن: النتائج (تبويب مستقل ومنظم بالأرقام) ✅
+            # ==========================================
+            with tab8:
+                st.header("📌 أبرز نتائج الدراسة" if lang=="العربية" else "📌 Key Results")
+                res_idx = 1
+                
+                # --- 1️⃣ النتيجة 1: عينة الدراسة (سحبها من الذاكرة) ---
+                st.subheader("📊 نتائج وصف عينة الدراسة" if lang=="العربية" else "📊 Sample Description Results")
+                if 'sample_results' in st.session_state and st.session_state['sample_results']:
+                    for res in st.session_state['sample_results']:
+                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {res}")
+                        res_idx += 1
+                else:
+                    st.info("⚠️ يرجى زيارة تبويب (عينة الدراسة) أولاً لتوليد النتائج." if lang=="العربية" else "Please visit Sample tab first.")
 
-    # --- النتيجة 2: الثبات ---
-    st.subheader("2️⃣ نتائج الثبات")
-    if 'reliability_result' in st.session_state:
-        st.markdown(f"**النتيجة ({res_idx}):** {st.session_state['reliability_result']}")
-        res_idx += 1
-    else:
-        st.write("يرجى فحص تبويب الثبات أولاً.")
+                st.markdown("---")
 
-    # --- النتائج 3، 4، 5، 6، 7: الفرضيات الخمس ---
-    st.subheader("3️⃣ نتائج اختبار الفرضيات")
-    if 'hypothesis_history' in st.session_state and len(st.session_state['hypothesis_history']) > 0:
-        # نأخذ أول 5 فرضيات تم اختبارها
-        for h in st.session_state['hypothesis_history'][:5]:
-            decision = "تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية"
-            st.markdown(f"**النتيجة ({res_idx}):** {decision} ({h['text']}).")
-            
-            # الشرح الأكاديمي الثابت للفرضيات
-            with st.expander(f"عرض الشرح الأكاديمي للنتيجة ({res_idx})"):
-                st.info("""
-                تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم.
-                وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة.
-                كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار.
-                وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة.
-                ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال.
-                وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.
-                """)
-            res_idx += 1
-    else:
-        st.warning("لم يتم اختبار أي فرضيات بعد في التبويب السابع.")
+                # --- 2️⃣ النتيجة 2: الثبات (سحبها من الذاكرة) ---
+                st.subheader("🧪 نتائج ثبات أداة الدراسة" if lang=="العربية" else "🧪 Reliability Results")
+                if 'reliability_result' in st.session_state:
+                    st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {st.session_state['reliability_result']}")
+                    res_idx += 1
+                else:
+                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد النتائج." if lang=="العربية" else "Please visit Reliability tab first.")
+
+                st.markdown("---")
+
+                # --- 3️⃣ النتائج من 3 إلى 7: اختبار الفرضيات الخمس ---
+                st.subheader("⚖️ نتائج اختبار فرضيات الدراسة" if lang=="العربية" else "⚖️ Hypotheses Testing Results")
+                if 'hypothesis_history' in st.session_state and len(st.session_state['hypothesis_history']) > 0:
+                    # عرض أول 5 فرضيات فقط كما طلبت
+                    for h in st.session_state['hypothesis_history'][:5]:
+                        decision = ("تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية") if lang=="العربية" else ("Accepted" if h['result'] == "accepted" else "Rejected")
+                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {decision} ({h['text']}).")
+                        
+                        # الشرح الأكاديمي الثابت (6 أسطر) داخل موسع Expanders
+                        with st.expander(f"📝 {'الشرح الأكاديمي للنتيجة' if lang=='العربية' else 'Academic Explanation'} ({res_idx})"):
+                            st.info("""
+                            تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم.
+                            وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة.
+                            كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار.
+                            وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة.
+                            ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال.
+                            وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.
+                            """)
+                        res_idx += 1
+                        
+                    # إذا زاد عدد الفرضيات عن 5، يمكنك عرض الباقي هنا بدون شرح مطول أو كما تفضل
+                    if len(st.session_state['hypothesis_history']) > 5:
+                        st.caption("توجد فرضيات إضافية مختبرة في السجل...")
+                else:
+                    st.warning("⚠️ لم يتم اختبار أي فرضيات بعد في تبويب (محلل الفرضيات)." if lang=="العربية" else "No hypotheses tested yet.")
             # ==========================================
             # 9. التوصيات (تبويب مستقل) ✅
             # ==========================================
