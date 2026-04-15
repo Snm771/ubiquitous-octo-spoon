@@ -17,6 +17,9 @@ if 'sample_results' not in st.session_state:
 
 if 'reliability_result' not in st.session_state:
     st.session_state['reliability_result'] = "" # لحفظ نتيجة الثبات [cite: 43]
+    # أضف هذا السطر مع بقية التعريفات في الأعلى 👇
+if 'dim_recs' not in st.session_state:
+    st.session_state['dim_recs'] = []
 
 if 'hypothesis_history' not in st.session_state:
     st.session_state['hypothesis_history'] = [] # لحفظ نتائج الفرضيات الـ 7 [cite: 105]
