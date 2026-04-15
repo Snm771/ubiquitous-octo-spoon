@@ -83,6 +83,51 @@ if lang == "العربية":
     """, unsafe_allow_html=True)
 else:
     st.markdown("""<style>.stApp { direction: ltr !important; text-align: left !important; }</style>""", unsafe_allow_html=True)
+# 👇=== 🌟 كود الفخامة واللمسات الاحترافية (UI Enhancements) 🌟 ===👇
+st.markdown("""
+    <style>
+    /* 1. جعل الأزرار فخمة مع تأثير تفاعلي عند مرور الماوس */
+    .stButton > button {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        transition: all 0.3s ease !important;
+        font-weight: bold !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2) !important;
+        background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%) !important;
+    }
+
+    /* 2. جعل حقول الإدخال والقوائم المنسدلة تبدو عصرية */
+    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea {
+        border-radius: 10px !important;
+        border: 1px solid #e0e0e0 !important;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05) !important;
+        transition: border-color 0.3s ease !important;
+    }
+    .stSelectbox div[data-baseweb="select"] > div:hover, .stTextInput input:hover {
+        border-color: #2a5298 !important;
+    }
+
+    /* 3. تجميل القوائم الجانبية (Expanders) لتشبه البطاقات */
+    .streamlit-expanderHeader {
+        background-color: #f8f9fa !important;
+        border-radius: 10px !important;
+        border: 1px solid #eef2f5 !important;
+    }
+    [data-testid="stExpander"] {
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important;
+        border-radius: 10px !important;
+        border: none !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# 👆================================================================👆
+    
 # ==========================================
 # --- دوال الذكاء الاصطناعي (الرابط المحدث لـ Hugging Face) ---
 # ==========================================
