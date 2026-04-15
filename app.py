@@ -4,31 +4,19 @@ import plotly.express as px
 import pingouin as pg
 import numpy as np
 
-# استيراد مكتبة OpenAI المستقرة جداً للربط مع سيرفرات Hugging Face
+# استيراد مكتبة OpenAI
 try:
     from openai import OpenAI
 except ImportError:
     st.warning("جاري إعداد المكتبات...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
-# --- تعريف كافة مفاتيح الذاكرة لمنع الأخطاء ---
-if 'hypothesis_history' not in st.session_state:
-    st.session_state['hypothesis_history'] = []
-if 'sample_results' not in st.session_state:
-    st.session_state['sample_results'] = []
-if 'reliability_result' not in st.session_state:
-    st.session_state['reliability_result'] = ""
-if 'dim_recs' not in st.session_state:
-    st.session_state['dim_recs'] = []
-# 👆==============================👆
+
 # ==========================================
-# 🌍 1. نظام اللغات والتنسيق المتقدم (RTL / LTR)
+# 1. إعدادات الذاكرة (مرة واحدة فقط لمنع الأخطاء)
 # ==========================================
-# 1. تعريف لغة الواجهة
 if 'lang' not in st.session_state:
     st.session_state.lang = "العربية"
-
-# 👇=== 2. تأكد من وجود كل المخازن هنا في الأعلى لمنع الأخطاء الحمراء ===👇
 if 'hypothesis_history' not in st.session_state:
     st.session_state['hypothesis_history'] = []
 if 'sample_results' not in st.session_state:
@@ -37,71 +25,78 @@ if 'reliability_result' not in st.session_state:
     st.session_state['reliability_result'] = ""
 if 'dim_recs' not in st.session_state:
     st.session_state['dim_recs'] = []
-# 👆================================================================👆
 
-lang = st.sidebar.radio("🌍 اختر لغة الواجهة / Choose Language", ["العربية", "English"])
+# ==========================================
+# 2. نظام اللغات ودالة الترجمة (Localization)
+# ==========================================
+lang = st.sidebar.radio("🌍 Language / لغة الواجهة", ["العربية", "English"])
 
-# 3. حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط (النسخة المتجاوبة والاحترافية)
+# 👇 هذه هي دالة الترجمة السحرية
+def tr(ar_text, en_text):
+    return ar_text if lang == "العربية" else en_text
+
+# تحديد الاتجاه والخط بناءً على اللغة
 if lang == "العربية":
-    st.markdown("""
-        <style>
-        /* 1. جعل الحاوية الرئيسية والشريط الجانبي من اليمين لليسار بأمان */
-        .block-container, [data-testid="stSidebar"] {
-            direction: rtl !important;
-        }
-        
-        /* 2. ضبط النصوص والعناوين فقط لتكون باليمين دون تخريب هيكل الشاشات الصغيرة */
-        .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, label, li {
-            direction: rtl !important;
-            text-align: right !important;
-            font-family: 'Tajawal', 'Arial', sans-serif !important;
-        }
-        
-        /* 3. حماية الشريط العلوي (المنيو وأزرار المشاركة) ليبقى متناسقاً ولا يتداخل مع العنوان */
-        [data-testid="stHeader"] {
-            direction: ltr !important;
-            background-color: transparent !important;
-        }
-        
-        /* 4. إصلاح التبويبات (Tabs) لتتناسب مع الجوال والسحب بالإصبع */
-        .stTabs [data-baseweb="tab-list"] { 
-            direction: rtl !important;
-            overflow-x: auto !important; 
-            scrollbar-width: none !important; 
-        }
-        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
-            display: none !important; 
-        }
-        .stTabs [data-baseweb="tab"] {
-            white-space: nowrap !important; 
-            font-weight: bold !important;
-        }
-        
-        /* 5. إصلاح الجداول */
-        .stDataFrame div { direction: rtl !important; }
-        </style>
-    """, unsafe_allow_html=True)
+    direction = "rtl"
+    align = "right"
+    font_family = "'Tajawal', 'Arial', sans-serif"
 else:
-    st.markdown("""<style>.stApp { direction: ltr !important; text-align: left !important; }</style>""", unsafe_allow_html=True)
-# 👇=== 🌟 كود الواجهة الاحترافية الشاملة (ثيم متكيف + فخامة) 🌟 ===👇
-st.markdown("""
+    direction = "ltr"
+    align = "left"
+    font_family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+
+# ==========================================
+# 3. 🌟 كود الواجهة الاحترافية الشاملة (ثيم زجاجي متكيف + اتجاهات) 🌟
+# ==========================================
+st.markdown(f"""
     <style>
-    /* 1. تأثير البطاقات الزجاجية الفخمة للحقول والمدخلات */
-    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea {
+    /* التوجيه والخطوط الشاملة */
+    .block-container, [data-testid="stSidebar"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, li {{
+        direction: {direction} !important;
+        text-align: {align} !important;
+        font-family: {font_family} !important;
+    }}
+
+    [data-testid="stHeader"] {{
+        direction: ltr !important;
+        background-color: transparent !important;
+    }}
+
+    /* تصميم التبويبات الفخم */
+    .stTabs [data-baseweb="tab-list"] {{ 
+        direction: {direction} !important;
+        overflow-x: auto !important; 
+        scrollbar-width: none !important; 
+    }}
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
+        display: none !important; 
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        white-space: nowrap !important;
+        font-weight: bold !important;
+        height: 50px !important;
+        letter-spacing: 0.5px;
+    }}
+    .stTabs [data-baseweb="tab-highlight"] {{
+        background-color: #2a5298 !important;
+    }}
+
+    /* تأثير البطاقات الزجاجية للحقول والمدخلات (Glassmorphism) */
+    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea, .stFileUploader {{
         background-color: rgba(255, 255, 255, 0.05) !important;
         backdrop-filter: blur(10px) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(128, 128, 128, 0.2) !important;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    }
+    }}
     
-    .stSelectbox div[data-baseweb="select"] > div:hover, .stTextInput input:hover {
+    .stSelectbox div[data-baseweb="select"] > div:hover, .stTextInput input:hover {{
         border-color: #2a5298 !important;
         box-shadow: 0 0 15px rgba(42, 82, 152, 0.2) !important;
-    }
+    }}
 
-    /* 2. الأزرار الاحترافية بتأثير الـ Gradient المتطور */
-    .stButton > button {
+    /* الأزرار الاحترافية بتأثير Gradient المتطور */
+    .stButton > button {{
         background: linear-gradient(145deg, #1e3c72 0%, #2a5298 100%) !important;
         color: white !important;
         border-radius: 14px !important;
@@ -111,40 +106,31 @@ st.markdown("""
         transition: all 0.3s ease !important;
         width: auto !important;
         min-width: 150px;
-    }
+    }}
     
-    .stButton > button:hover {
+    .stButton > button:hover {{
         transform: scale(1.03) translateY(-2px) !important;
         box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4) !important;
         filter: brightness(1.2);
-    }
+    }}
 
-    /* 3. تجميل الـ Expanders لتكون كأنها أجزاء من لوحة تحكم سيارة فارهة */
-    .streamlit-expanderHeader {
+    /* تجميل الـ Expanders لتكون كأنها أجزاء من لوحة تحكم فارهة */
+    .streamlit-expanderHeader {{
         background-color: rgba(128, 128, 128, 0.05) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(128, 128, 128, 0.1) !important;
         padding: 10px 15px !important;
-    }
+    }}
     
-    [data-testid="stExpander"] {
+    [data-testid="stExpander"] {{
         border: none !important;
         background-color: rgba(128, 128, 128, 0.02) !important;
         margin-bottom: 15px !important;
-    }
-
-    /* 4. لمسة إبداعية لشريط التبويبات (Tabs) */
-    .stTabs [data-baseweb="tab-highlight"] {
-        background-color: #2a5298 !important;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.5px;
-    }
+    }}
+    
+    .stDataFrame div {{ direction: {direction} !important; }}
     </style>
 """, unsafe_allow_html=True)
-# 👆================================================================👆
     
 # ==========================================
 # --- دوال الذكاء الاصطناعي (الرابط المحدث لـ Hugging Face) ---
@@ -250,9 +236,20 @@ def smart_classify_columns(df):
 # ==========================================
 # واجهة المستخدم الأساسية
 # ==========================================
-st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
-st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
+# استخدم الدالة tr لترجمة العنوان الرئيسي
+st.title(tr("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي", "📊 SmartStat Pro - Automated Statistical Expert"))
+
+# استخدم الدالة tr لترجمة الوصف
+st.markdown(tr(
+    "يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.", 
+    "The system now attaches an **academic explanation** with every statistical result, ready for direct copying into the discussion chapters."
+))
 st.markdown("---")
+
+# ... (كود مفتاح API يبقى كما هو) ...
+
+# استخدم الدالة tr لترجمة منطقة رفع الملفات
+uploaded_file = st.file_uploader(tr("قم برفع ملف البيانات الخام (CSV أو Excel)", "Upload raw data file (CSV or Excel)"), type=["csv", "xlsx"])
 
 # ==========================================
 # سحب مفتاح الذكاء الاصطناعي تلقائياً
