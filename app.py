@@ -495,44 +495,40 @@ if uploaded_file is not None:
                                         except Exception as e:
                                             st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
-           # ==========================================
-            # 8. التبويب الثامن: النتائج (تبويب مستقل ومنظم بالأرقام) ✅
+          # ==========================================
+            # 8. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
             # ==========================================
             with tab8:
                 st.header("📌 أبرز نتائج الدراسة" if lang=="العربية" else "📌 Key Results")
                 res_idx = 1
                 
-                # --- 1️⃣ النتيجة 1: عينة الدراسة (سحبها من الذاكرة) ---
-                st.subheader("📊 نتائج وصف عينة الدراسة" if lang=="العربية" else "📊 Sample Description Results")
+                # --- 1️⃣ نتيجة عينة الدراسة (النتيجة رقم 1) ---
+                st.subheader("📊 نتائج وصف عينة الدراسة")
                 if 'sample_results' in st.session_state and st.session_state['sample_results']:
                     for res in st.session_state['sample_results']:
-                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {res}")
+                        st.markdown(f"**النتيجة ({res_idx}):** {res}")
                         res_idx += 1
                 else:
-                    st.info("⚠️ يرجى زيارة تبويب (عينة الدراسة) أولاً لتوليد النتائج." if lang=="العربية" else "Please visit Sample tab first.")
+                    st.info("⚠️ يرجى زيارة تبويب (عينة الدراسة) أولاً لتوليد النتائج.")
 
-                st.markdown("---")
-
-                # --- 2️⃣ النتيجة 2: الثبات (سحبها من الذاكرة) ---
-                st.subheader("🧪 نتائج ثبات أداة الدراسة" if lang=="العربية" else "🧪 Reliability Results")
-                if 'reliability_result' in st.session_state:
-                    st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {st.session_state['reliability_result']}")
+                # --- 2️⃣ نتيجة الثبات (النتيجة رقم 2) ---
+                st.subheader("🧪 نتائج ثبات أداة الدراسة")
+                if 'reliability_result' in st.session_state and st.session_state['reliability_result']:
+                    st.markdown(f"**النتيجة ({res_idx}):** {st.session_state['reliability_result']}")
                     res_idx += 1
                 else:
-                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد النتائج." if lang=="العربية" else "Please visit Reliability tab first.")
+                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد النتائج.")
 
-                st.markdown("---")
-
-                # --- 3️⃣ النتائج من 3 إلى 7: اختبار الفرضيات الخمس ---
-                st.subheader("⚖️ نتائج اختبار فرضيات الدراسة" if lang=="العربية" else "⚖️ Hypotheses Testing Results")
+                # --- 3️⃣ نتائج الفرضيات (النتائج من 3 إلى 7) ---
+                st.subheader("⚖️ نتائج اختبار فرضيات الدراسة")
                 if 'hypothesis_history' in st.session_state and len(st.session_state['hypothesis_history']) > 0:
-                    # عرض أول 5 فرضيات فقط كما طلبت
+                    # عرض أول 5 فرضيات لتكملة الرقم 7
                     for h in st.session_state['hypothesis_history'][:5]:
-                        decision = ("تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية") if lang=="العربية" else ("Accepted" if h['result'] == "accepted" else "Rejected")
-                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({res_idx}):** {decision} ({h['text']}).")
+                        decision = "تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية"
+                        st.markdown(f"**النتيجة ({res_idx}):** {decision} ({h['text']}).")
                         
-                        # الشرح الأكاديمي الثابت (6 أسطر) داخل موسع Expanders
-                        with st.expander(f"📝 {'الشرح الأكاديمي للنتيجة' if lang=='العربية' else 'Academic Explanation'} ({res_idx})"):
+                        # الشرح الأكاديمي الثابت (6 أسطر)
+                        with st.expander(f"📝 عرض الشرح الأكاديمي للنتيجة ({res_idx})"):
                             st.info("""
                             تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم.
                             وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة.
@@ -542,21 +538,40 @@ if uploaded_file is not None:
                             وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.
                             """)
                         res_idx += 1
-                        
-                    # إذا زاد عدد الفرضيات عن 5، يمكنك عرض الباقي هنا بدون شرح مطول أو كما تفضل
-                    if len(st.session_state['hypothesis_history']) > 5:
-                        st.caption("توجد فرضيات إضافية مختبرة في السجل...")
                 else:
-                    st.warning("⚠️ لم يتم اختبار أي فرضيات بعد في تبويب (محلل الفرضيات)." if lang=="العربية" else "No hypotheses tested yet.")
+                    st.warning("⚠️ لم يتم اختبار أي فرضيات بعد في تبويب (محلل الفرضيات).")
+
+                # --- منطق داخلي لتوليد التوصيات (بدون عرض رسوم) ---
+                st.session_state['dim_recs'] = [] # تفريغ القائمة لتحديثها
+                for dim_name, cols in dimensions_dict.items():
+                    if cols:
+                        item_means = df_encoded[cols].mean()
+                        overall_mean = item_means.mean()
+                        low_items = item_means[item_means <= 3.50]
+                        if not low_items.empty:
+                            for item_text, mean_val in low_items.items():
+                                st.session_state['dim_recs'].append({
+                                    "dim": dim_name, "mean": round(mean_val, 2),
+                                    "rec": f"توصي الدراسة بضرورة تحسين ({item_text}) ورفع مستواه لتطوير الأداء."
+                                })
+                        else:
+                            st.session_state['dim_recs'].append({
+                                "dim": dim_name, "mean": round(item_means.min(), 2),
+                                "rec": f"توصي الدراسة بضرورة المحافظة على مستوى ({item_means.idxmin()}) وتعزيزه."
+                            })
+
             # ==========================================
-            # 9. التوصيات (تبويب مستقل) ✅
+            # 9. التبويب التاسع: التوصيات (تبويب مستقل تماماً) ✅
             # ==========================================
             with tab9:
                 st.header("💡 التوصيات الذكية" if lang=="العربية" else "💡 Smart Recommendations")
-                if dim_recs:
-                    for idx, rec in enumerate(dim_recs, 1):
-                        st.success(f"**{idx}. {'المحور' if lang=='العربية' else 'Dim'}:** {rec['dim']} | **{'المتوسط' if lang=='العربية' else 'Mean'}:** {rec['mean']}\n\n📌 {rec['rec']}")
+                
+                # سحب التوصيات من الذاكرة التي ملأناها في التبويب الثامن
+                if 'dim_recs' in st.session_state and st.session_state['dim_recs']:
+                    for idx, rec in enumerate(st.session_state['dim_recs'], 1):
+                        st.success(f"**{idx}. المحور:** {rec['dim']} | **المتوسط:** {rec['mean']}\n\n📌 {rec['rec']}")
                 else:
-                    st.warning("لا توجد توصيات حالياً. تأكد من تحديد الأسئلة واختبار المحاور." if lang=="العربية" else "No recommendations yet.")
+                    st.warning("⚠️ يرجى زيارة تبويب (النتائج) أولاً لتوليد التوصيات بناءً على مستويات المحاور.")
 
-    except Exception as e: st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
+    except Exception as e: 
+        st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
