@@ -11,6 +11,13 @@ except ImportError:
     st.warning("جاري إعداد المكتبات...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
+st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
+
+# ==========================================
+# أضف هذين السطرين هنا لإصلاح الخطأ 👇
+if 'hypothesis_history' not in st.session_state:
+    st.session_state['hypothesis_history'] = []
+# ==========================================
 # ==========================================
 # 🌍 1. نظام اللغات والتنسيق المتقدم (RTL / LTR)
 # ==========================================
