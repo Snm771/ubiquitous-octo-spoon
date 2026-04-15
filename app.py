@@ -27,34 +27,48 @@ if 'dim_recs' not in st.session_state:
 if 'lang' not in st.session_state:
     st.session_state.lang = "العربية"
 
-lang = st.sidebar.radio("🌍 اختر لغة الواجهة / Choose Language", ["العربية", "English"])
-
-# حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط
+# حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط والتبويبات
 if lang == "العربية":
     st.markdown("""
         <style>
-        .stApp, [data-testid="stSidebar"], [data-testid="stMarkdownContainer"], .stText, .stDataFrame, .stTable, .stRadio {
+        /* 1. جعل الحاوية الرئيسية والشريط الجانبي من اليمين لليسار بأمان */
+        .block-container, [data-testid="stSidebar"] {
+            direction: rtl !important;
+        }
+        
+        /* 2. ضبط النصوص والعناوين فقط لتكون باليمين دون تخريب هيكل الشاشات الصغيرة */
+        .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, label, li {
             direction: rtl !important;
             text-align: right !important;
-            font-size: 16px !important;
             font-family: 'Tajawal', 'Arial', sans-serif !important;
         }
-        /* إصلاح انضباط النقاط وعلامات الترقيم في نهاية الجمل العربية */
-        p, div, span, label, h1, h2, h3, h4, h5, h6, li {
-            unicode-bidi: plaintext !important;
-            text-align: right !important;
-            direction: rtl !important;
+        
+        /* 3. حماية الشريط العلوي (المنيو وأزرار المشاركة) ليبقى متناسقاً ولا يتداخل مع العنوان */
+        [data-testid="stHeader"] {
+            direction: ltr !important;
+            background-color: transparent !important;
         }
-        .stTabs [data-baseweb="tab-list"] { direction: rtl !important; }
+        
+        /* 4. إصلاح التبويبات (Tabs) لتتناسب مع الجوال والسحب بالإصبع */
+        .stTabs [data-baseweb="tab-list"] { 
+            direction: rtl !important;
+            overflow-x: auto !important; 
+            scrollbar-width: none !important; 
+        }
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+            display: none !important; 
+        }
+        .stTabs [data-baseweb="tab"] {
+            white-space: nowrap !important; 
+            font-weight: bold !important;
+        }
+        
+        /* 5. إصلاح الجداول */
         .stDataFrame div { direction: rtl !important; }
         </style>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""<style>.stApp { direction: ltr !important; text-align: left !important; }</style>""", unsafe_allow_html=True)
-# أضف هذين السطرين هنا لإصلاح الخطأ 👇
-if 'hypothesis_history' not in st.session_state:
-    st.session_state['hypothesis_history'] = []
-
 # ==========================================
 # --- دوال الذكاء الاصطناعي (الرابط المحدث لـ Hugging Face) ---
 # ==========================================
@@ -256,7 +270,7 @@ if uploaded_file is not None:
                             st.dataframe(demo_df_with_total, use_container_width=True)
                             chart_type_demo = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
                             
-                        with col2: 
+                       with col2: 
                             if chart_type_demo == "دائري (Pie)":
                                 fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
                             elif chart_type_demo == "أعمدة (Bar)":
@@ -268,6 +282,19 @@ if uploaded_file is not None:
                             else:
                                 fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
                             
+                            # 👇=== أضف هذا الكود هنا لترتيب الـ Legend ومنع قص النص ===👇
+                            fig.update_layout(
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="top",
+                                    y=-0.1,
+                                    xanchor="center",
+                                    x=0.5
+                                ),
+                                margin=dict(l=10, r=10, t=30, b=10)
+                            )
+                            # 👆=====================================================👆
+
                             st.plotly_chart(fig, use_container_width=True)
                         
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
