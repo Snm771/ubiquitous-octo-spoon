@@ -265,47 +265,22 @@ if uploaded_file is not None:
                             
                             st.plotly_chart(fig, use_container_width=True)
                         
-                        # --- الشرح الأكاديمي الخاص بك (لم يتم مسحه) ---
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
 
-                        # 👇=== الكود الجديد المضاف لحفظ النتيجة في الذاكرة بصمت ===👇
+                        # 👇=== تمت إضافة هذا الكود للحفظ الصامت للنتيجة ===👇
                         if 'sample_results' not in st.session_state:
                             st.session_state['sample_results'] = []
                         
                         res_txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({counts.idxmax()}) بنسبة ({percentages.max():.1f}%)."
                         if res_txt not in st.session_state['sample_results']:
                             st.session_state['sample_results'].append(res_txt)
-                        # 👆==========================================================👆
+                        # 👆===============================================👆
                         
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
                                     st.success(get_table_explanation(demo_df_with_total.to_markdown(), f"توزيع العينة حسب {col}", api_key))
                         st.markdown("---")
-
-            # ==========================================
-            # 2. تبويب الإحصاء الوصفي
-            # ==========================================
-            with tab2:
-                st.subheader("📊 الإحصاء الوصفي (المتوسطات والانحرافات المعيارية)")
-                st.markdown("### 1️⃣ الإحصاء العام للمحاور والأبعاد")
-                desc_df = df_encoded[analysis_cols].describe().T
-                desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
-                st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
-                
-                if api_key:
-                    if st.button("✨ توليد قراءة ذكية لجدول المحاور", key="ai_desc"):
-                        with st.spinner("جاري التحليل..."):
-                            st.success(get_table_explanation(desc_df.to_markdown(), "المتوسطات والانحرافات المعيارية للمحاور", api_key))
-
-                st.markdown(f"### 2️⃣ الإحصاء التفصيلي لجميع فقرات الاستبيان (العدد: {len(active_questions)})")
-                if active_questions:
-                    items_desc = df_encoded[active_questions].describe().T
-                    items_desc = items_desc.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
-                    st.dataframe(items_desc[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']].style.background_gradient(subset=['المتوسط'], cmap='Blues'), use_container_width=True)
-
-                st.markdown("### 📝 التفسير الأكاديمي:")
-                st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
             # ==========================================
             # 2. تبويب الإحصاء الوصفي
             # ==========================================
