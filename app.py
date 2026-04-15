@@ -4,24 +4,57 @@ import plotly.express as px
 import pingouin as pg
 import numpy as np
 
+# استيراد مكتبة OpenAI المستقرة جداً للربط مع سيرفرات Hugging Face
 try:
     from openai import OpenAI
 except ImportError:
     st.warning("جاري إعداد المكتبات...")
 
 st.set_page_config(page_title="SmartStat Pro | الخبير الإحصائي", page_icon="📊", layout="wide")
+# ==========================================
+# 🌍 1. نظام اللغات والتنسيق المتقدم (RTL / LTR)
+# ==========================================
+if 'lang' not in st.session_state:
+    st.session_state.lang = "العربية"
+
+lang = st.sidebar.radio("🌍 اختر لغة الواجهة / Choose Language", ["العربية", "English"])
+
+# حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط
+if lang == "العربية":
+    st.markdown("""
+        <style>
+        .stApp, [data-testid="stSidebar"], [data-testid="stMarkdownContainer"], .stText, .stDataFrame, .stTable, .stRadio {
+            direction: rtl !important;
+            text-align: right !important;
+            font-size: 16px !important;
+            font-family: 'Tajawal', 'Arial', sans-serif !important;
+        }
+        /* إصلاح انضباط النقاط وعلامات الترقيم في نهاية الجمل العربية */
+        p, div, span, label, h1, h2, h3, h4, h5, h6, li {
+            unicode-bidi: plaintext !important;
+            text-align: right !important;
+            direction: rtl !important;
+        }
+        .stTabs [data-baseweb="tab-list"] { direction: rtl !important; }
+        .stDataFrame div { direction: rtl !important; }
+        </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""<style>.stApp { direction: ltr !important; text-align: left !important; }</style>""", unsafe_allow_html=True)
 
 # ==========================================
-# --- دوال الذكاء الاصطناعي ---
+# --- دوال الذكاء الاصطناعي (الرابط المحدث لـ Hugging Face) ---
 # ==========================================
 def run_ai(prompt, api_key):
     try:
+        # ✅ تم تحديث الرابط إلى router.huggingface.co
         client = OpenAI(
             base_url="https://router.huggingface.co/v1/",
             api_key=api_key
         )
+        
         response = client.chat.completions.create(
-            model="Qwen/Qwen2.5-7B-Instruct",
+            model="Qwen/Qwen2.5-7B-Instruct", # الموديل الجبار في اللغة العربية
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1500,
             temperature=0.3
@@ -70,63 +103,7 @@ def get_table_explanation(table_string, context, api_key):
     return run_ai(prompt, api_key)
 
 # ==========================================
-# ✅ دالة تحليل الفرضيات الذكية (المطلوبة)
-# ==========================================
-def analyze_hypothesis_smart(hypotheses):
-    text = ""
-    for i, h in enumerate(hypotheses, 1):
-        name = h['name']
-        p_value = h['p_value']
-        
-        # 🔹 تحديد نوع الفرضية تلقائيًا
-        if "أثر" in name:
-            h_type = "effect"
-        elif "علاقة" in name or "ارتباط" in name:
-            h_type = "correlation"
-        elif "فروق" in name:
-            h_type = "difference"
-        else:
-            h_type = "general"
-
-        text += f"- تبين نتائج اختبار الفرضية ({i}) التي تنص على ({name})، "
-
-        # 🔹 القرار
-        if p_value < 0.05:
-            text += "وجود دلالة إحصائية.\n"
-            if h_type == "effect":
-                text += "تشير هذه النتيجة إلى وجود أثر معنوي للمتغير المستقل على المتغير التابع، "
-                text += "مما يعني أن التغير في المتغير المستقل يؤدي إلى تغير واضح في المتغير التابع، "
-                text += "وهو ما يعكس قوة التأثير وأهميته في تفسير الظاهرة محل الدراسة. "
-            elif h_type == "correlation":
-                text += "تشير هذه النتيجة إلى وجود علاقة ارتباطية ذات دلالة إحصائية بين المتغيرات، "
-                text += "مما يدل على أن المتغيرات تتحرك معًا في اتجاه معين سواء كان طرديًا أو عكسيًا، "
-                text += "وهو ما يعكس وجود ارتباط حقيقي يمكن الاعتماد عليه. "
-            elif h_type == "difference":
-                text += "تشير هذه النتيجة إلى وجود فروق ذات دلالة إحصائية بين متوسطات المجموعات، "
-                text += "مما يدل على أن هناك اختلافًا حقيقيًا بين الفئات محل المقارنة، "
-                text += "وليس مجرد فروق عشوائية. "
-            else:
-                text += "تشير هذه النتيجة إلى وجود علاقة ذات دلالة إحصائية بين المتغيرات، "
-            text += "وبناءً على ذلك، يتم قبول الفرضية.\n\n"
-        else:
-            text += "عدم وجود دلالة إحصائية.\n"
-            if h_type == "effect":
-                text += "تشير هذه النتيجة إلى عدم وجود أثر معنوي للمتغير المستقل على المتغير التابع، "
-                text += "مما يدل على ضعف تأثير المتغير المستقل أو عدم وجوده. "
-            elif h_type == "correlation":
-                text += "تشير هذه النتيجة إلى عدم وجود علاقة ارتباطية ذات دلالة إحصائية بين المتغيرات، "
-                text += "مما يدل على أن العلاقة بينهما ضعيفة أو عشوائية. "
-            elif h_type == "difference":
-                text += "تشير هذه النتيجة إلى عدم وجود فروق ذات دلالة إحصائية بين المجموعات، "
-                text += "مما يعني أن الفروق الظاهرة قد تكون عشوائية. "
-            else:
-                text += "تشير هذه النتيجة إلى عدم وجود علاقة ذات دلالة إحصائية، "
-            text += "وبناءً على ذلك، يتم رفض الفرضية.\n\n"
-    return text
-
-# ==========================================
-# --- دوال المعالجة ---
-# ==========================================
+# --- 1. دالة التشفير الذكي ---
 def encode_likert(df):
     likert_map = {
         "موافق بشدة": 5, "موافق": 4, "متوسط": 3, "محايد": 3, "غير موافق": 2, "غير موافق بشدة": 1, "لا أوافق": 2, "لا أوافق بشدة": 1,
@@ -136,18 +113,25 @@ def encode_likert(df):
         "نعم": 2, "لا": 1
     }
     df_cleaned = df.copy()
+    
     for col in df_cleaned.select_dtypes(include=['object']).columns:
         df_cleaned[col] = df_cleaned[col].apply(lambda x: str(x).strip() if pd.notnull(x) else x)
+        
     df_cleaned = df_cleaned.replace(likert_map)
+    
     for col in df_cleaned.columns:
         if col != 'Timestamp':
-            try: df_cleaned[col] = pd.to_numeric(df_cleaned[col])
-            except ValueError: pass
+            try: 
+                df_cleaned[col] = pd.to_numeric(df_cleaned[col])
+            except ValueError: 
+                pass 
     return df_cleaned
 
+# --- 2. التصنيف الدلالي المطور ---
 def smart_classify_columns(df):
     categorical_cols, numeric_cols = [], []
     demo_keywords = ['عمر', 'سن', 'جنس', 'نوع', 'مؤهل', 'مرحلة', 'صف', 'خبرة', 'حالة', 'دخل', 'تخصص', 'عمل', 'تعليم', 'مهنة', 'زيارة', 'مستوى']
+    
     for col in df.columns:
         if col.lower() in ['timestamp', 'unnamed: 0']: continue
         words_count = len(str(col).split())
@@ -160,39 +144,20 @@ def smart_classify_columns(df):
     return categorical_cols, numeric_cols
 
 # ==========================================
-# ✅ زر تبديل اللغة + إدارة اللغة
-# ==========================================
-if 'lang' not in st.session_state:
-    st.session_state.lang = 'ar'
-
-def set_language(lang):
-    st.session_state.lang = lang
-    st.rerun()
-
-# ==========================================
-# واجهة المستخدم
+# واجهة المستخدم الأساسية
 # ==========================================
 st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
-st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية جاهز للنسخ المباشر في فصول مناقشة النتائج.")
+st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
 st.markdown("---")
 
-# ✅ زر تبديل اللغة في الشريط الجانبي
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🌐 لغة الواجهة")
-col_l1, col_l2 = st.sidebar.columns(2)
-with col_l1:
-    if st.button("🇸🇦 عربي", use_container_width=True, key="btn_ar"):
-        if st.session_state.lang != 'ar': set_language('ar')
-with col_l2:
-    if st.button("🇬🇧 English", use_container_width=True, key="btn_en"):
-        if st.session_state.lang != 'en': set_language('en')
-
-# إعدادات الذكاء الاصطناعي
+# ==========================================
+# سحب مفتاح الذكاء الاصطناعي تلقائياً
+# ==========================================
 if "HF_TOKEN" in st.secrets:
     api_key = st.secrets["HF_TOKEN"]
 else:
     st.sidebar.title("🤖 إعدادات الذكاء الاصطناعي")
-    api_key = st.sidebar.text_input("🔑 مفتاح Hugging Face API:", type="password", help="ضع المفتاح هنا لتفعيل الشرح التوليدي")
+    api_key = st.sidebar.text_input("🔑 مفتاح Hugging Face API:", type="password", help="ضع المفتاح هنا لتفعيل الشرح التوليدي والتبويب السابع")
 
 uploaded_file = st.file_uploader("قم برفع ملف البيانات الخام (CSV أو Excel)", type=["csv", "xlsx"])
 
@@ -234,6 +199,7 @@ if uploaded_file is not None:
                 active_questions.extend(dim_cols)
                 
         active_questions = list(dict.fromkeys(active_questions))
+
         if len(active_questions) > 0:
             df_encoded['الاستبيان ككل (المتوسط العام)'] = df_encoded[active_questions].mean(axis=1)
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
@@ -241,38 +207,54 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة المحاور من القائمة الجانبية للبدء.")
         else:
-            # ✅ التبويبات التسعة (تم فصل النتائج والتوصيات)
-            tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+            # التبويبات الثمانية
+           # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
+            tabs_names = [
                 "👥 عينة الدراسة", "📊 الإحصاء الوصفي", "🧪 الثبات (ألفا)", 
-                "⚖️ الفروق (T-test/ANOVA)", "🔗 الارتباط (Pearson)",
-                "📈 الانحدار", "🧠 محلل الفرضيات الذكي",
-                "📋 النتائج", "💡 التوصيات"  # ✅ فصل النتائج عن التوصيات
-            ])
+                "⚖️ الفروق (T-test/ANOVA)", "🔗 الارتباط (Pearson)", "📈 الانحدار", 
+                "🧠 محلل الفرضيات الذكي", "📌 النتائج", "💡 التوصيات"
+            ] if lang == "العربية" else [
+                "👥 Sample", "📊 Descriptive", "🧪 Reliability", "⚖️ Differences", 
+                "🔗 Correlation", "📈 Regression", "🧠 AI Analyst", "📌 Results", "💡 Recommendations"
+            ]
+            tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(tabs_names)
 
             # ==========================================
-            # 1. تبويب عينة الدراسة
+            # 1. تبويب عينة الدراسة ✅ مع الرسوم المتعددة والمجموع
             # ==========================================
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
                     for col in categorical_cols:
                         st.markdown(f"### 📊 توزيع أفراد العينة حسب: ({col})")
+                        
                         counts = df_encoded[col].value_counts()
                         percentages = df_encoded[col].value_counts(normalize=True) * 100
                         demo_df = pd.DataFrame({'التكرار': counts, 'النسبة (%)': percentages.round(2)})
-                        total_row = pd.DataFrame({'التكرار': [len(df_encoded)], 'النسبة (%)': [100.00]}, index=['📊 المجموع الكلي ✓'])
+                        
+                        total_row = pd.DataFrame({
+                            'التكرار': [len(df_encoded)],
+                            'النسبة (%)': [100.00]
+                        }, index=['📊 المجموع الكلي ✓'])
                         demo_df_with_total = pd.concat([demo_df, total_row])
                         
                         col1, col2 = st.columns(2)
                         with col1: 
                             st.dataframe(demo_df_with_total, use_container_width=True)
                             chart_type_demo = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
+                            
                         with col2: 
-                            if chart_type_demo == "دائري (Pie)": fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
-                            elif chart_type_demo == "أعمدة (Bar)": fig = px.bar(demo_df, x=demo_df.index, y='التكرار', text='التكرار', color=demo_df.index, height=350)
-                            elif chart_type_demo == "دائري مجوف (Donut)": fig = px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.4, height=350)
-                            elif chart_type_demo == "خطي (Line)": fig = px.line(demo_df, x=demo_df.index, y='التكرار', markers=True, height=350)
-                            else: fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
+                            if chart_type_demo == "دائري (Pie)":
+                                fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
+                            elif chart_type_demo == "أعمدة (Bar)":
+                                fig = px.bar(demo_df, x=demo_df.index, y='التكرار', text='التكرار', color=demo_df.index, height=350)
+                            elif chart_type_demo == "دائري مجوف (Donut)":
+                                fig = px.pie(demo_df, values='التكرار', names=demo_df.index, hole=0.4, height=350)
+                            elif chart_type_demo == "خطي (Line)":
+                                fig = px.line(demo_df, x=demo_df.index, y='التكرار', markers=True, height=350)
+                            else:
+                                fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
+                            
                             st.plotly_chart(fig, use_container_width=True)
                         
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
@@ -317,9 +299,11 @@ if uploaded_file is not None:
                     if len(cols) > 1:
                         a_val = pg.cronbach_alpha(data=df_encoded[cols].dropna())[0]
                         alpha_results.append({"المحور / البعد": dim_name, "عدد العبارات": len(cols), "معامل ألفا": round(a_val, 3)})
+                
                 if len(active_questions) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
                     alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
+                
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
                     st.markdown("### 📝 التفسير الأكاديمي:")
@@ -333,6 +317,7 @@ if uploaded_file is not None:
                 if categorical_cols and analysis_cols:
                     g_col = st.selectbox("المتغير المستقل (ديموغرافي):", categorical_cols, key="g_f")
                     t_col = st.selectbox("المتغير التابع (المحور المراد اختباره):", analysis_cols, index=len(analysis_cols)-1, key="t_f")
+                    
                     temp_df = df_encoded[[g_col, t_col]].copy()
                     temp_df[t_col] = pd.to_numeric(temp_df[t_col], errors='coerce')
                     res_data = temp_df.dropna()
@@ -349,6 +334,7 @@ if uploaded_file is not None:
                                 res = pg.ttest(g1, g2)
                                 st.dataframe(res)
                                 pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
+                                
                                 st.markdown("### 📝 التفسير الأكاديمي:")
                                 if pval < 0.05: 
                                     st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
@@ -356,6 +342,7 @@ if uploaded_file is not None:
                                 else: 
                                     st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
                                     st.info(f"بينت نتائج اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) عدم ثبوت أي فروق ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة باختلاف فئاتهم في متغير ({g_col}) تجاه محور ({t_col}). يُفسر هذا إحصائياً بوجود حالة من التجانس والتقارب الكبير في آراء واتجاهات المبحوثين بغض النظر عن اختلاف تصنيفاتهم.")
+                                    
                             elif len(grps) > 2:
                                 st.markdown(f"**نوع الاختبار:** `تحليل التباين الأحادي (ANOVA)`")
                                 counts = res_data[g_col].value_counts()
@@ -364,6 +351,7 @@ if uploaded_file is not None:
                                 res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
                                 st.dataframe(res)
                                 pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
+                                
                                 st.markdown("### 📝 التفسير الأكاديمي:")
                                 if pval < 0.05: 
                                     st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
@@ -371,8 +359,10 @@ if uploaded_file is not None:
                                 else: 
                                     st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
                                     st.info(f"أوضحت المخرجات الإحصائية لتحليل التباين الأحادي (One-Way ANOVA) عدم وجود أي فروق ذات دلالة إحصائية عند مستوى الدلالة المرجعي ($\le 0.05$) بين فئات متغير ({g_col}) فيما يتعلق بتقييمهم لمحور ({t_col}). يعكس هذا الاستقرار الإحصائي إجماعاً عاماً وتوافقاً ملحوظاً من قبل أفراد العينة على فقرات هذا المحور.")
+                                    
                             st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
-                        except Exception as e: st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات: {e}")
+                        except Exception as e: 
+                            st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات: {e}")
 
             # ==========================================
             # 5. الارتباط
@@ -389,6 +379,7 @@ if uploaded_file is not None:
                             st.dataframe(corr_res[['n', 'r', 'p-val'] if 'p-val' in corr_res.columns else corr_res.columns])
                             pval = corr_res['p-val'].values[0] if 'p-val' in corr_res.columns else (corr_res['p-value'].values[0] if 'p-value' in corr_res.columns else 1.0)
                             rval = corr_res['r'].values[0] if 'r' in corr_res.columns else 0.0
+                            
                             st.markdown("### 📝 التفسير الأكاديمي:")
                             if pval < 0.05: 
                                 direction = "طردية (إيجابية)" if rval > 0 else "عكسية (سلبية)"
@@ -398,6 +389,7 @@ if uploaded_file is not None:
                             else: 
                                 st.warning("⚠️ **لا توجد علاقة ارتباط دالة إحصائياً.**")
                                 st.info(f"أظهرت معطيات اختبار بيرسون للارتباط الخطي عدم ثبوت أي علاقة ارتباطية ذات دلالة إحصائية بين محور ({v1}) ومحور ({v2}) عند مستوى الدلالة المعتمد ($\le 0.05$). يشير هذا الانعدام في الارتباط الخطي إلى استقلالية تامة لكل متغير عن الآخر ضمن سياق عينة الدراسة الحالية.")
+                                
                             st.plotly_chart(px.scatter(clean_corr, x=v1, y=v2, trendline="ols"), use_container_width=True)
                         except: st.error("تعذر حساب الارتباط.")
 
@@ -426,6 +418,7 @@ if uploaded_file is not None:
             with tab7:
                 st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
                 st.markdown("ضع فرضية بحثك هنا، وسيقوم الذكاء الاصطناعي بفهمها، واختيار الاختبار المناسب، وتنفيذه، وكتابة تقرير أكاديمي كامل لها!")
+                
                 if not api_key:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية أو إضافته في إعدادات التطبيق.")
                 else:
@@ -439,11 +432,13 @@ if uploaded_file is not None:
                     if 'ai_analysis' in st.session_state:
                         st.success("تم تحليل الفرضية بنجاح:")
                         st.info(st.session_state['ai_analysis'])
+                    
                     st.markdown("---")
                     col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"])
                     if "فروق" in col_type: h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols)
                     else: h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols)
                     h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
+                    
                     if st.button("🚀 تنفيذ وكتابة مناقشة النتائج (الفصل الرابع)"):
                         with st.spinner("جاري إجراء الاختبار وتأليف التفسير الأكاديمي..."):
                             clean_df = df_encoded[[h_indep, h_dep]].dropna()
@@ -465,24 +460,23 @@ if uploaded_file is not None:
                                         res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
                                     results_str = res.to_markdown()
                                     st.dataframe(res)
+                                
                                 final_explanation = generate_detailed_explanation(results_str, user_hypothesis, api_key)
                                 st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
                                 st.success(final_explanation)
                             except Exception as e:
                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
-            # ==========================================
-            # ✅ 8. التبويب الثامن: النتائج (بدون رسوم بيانية)
+          # ==========================================
+            # 8. تبويب النتائج (مستقل وبدون رسوم بيانية) ✅
             # ==========================================
             with tab8:
-                st.header("📋 نتائج الدراسة الإحصائية")
-                st.markdown("### 🎯 ملخص النتائج الرئيسية")
+                st.header("📌 أبرز نتائج الدراسة" if lang=="العربية" else "📌 Key Results")
                 
-                # دالة مساعدة لتحديد المستوى
                 def get_level(mean_val):
-                    if mean_val >= 3.68: return "مرتفع"
-                    if mean_val >= 2.34: return "متوسط"
-                    return "منخفض"
+                    if mean_val >= 3.68: return "مرتفع" if lang=="العربية" else "High"
+                    if mean_val >= 2.34: return "متوسط" if lang=="العربية" else "Medium"
+                    return "منخفض" if lang=="العربية" else "Low"
 
                 result_counter = 1
                 
@@ -490,180 +484,56 @@ if uploaded_file is not None:
                 if categorical_cols:
                     for col in categorical_cols:
                         top_cat = df_encoded[col].value_counts().idxmax()
-                        st.markdown(f"**النتيجة ({result_counter}):** الفئة الأعلى تمثيلاً في متغير ({col}) هي فئة ({top_cat}).")
+                        txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({top_cat})، حيث سجلت النسبة الأعلى مقارنة ببقية الفئات." if lang=="العربية" else f"Top category in ({col}) is ({top_cat})."
+                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
                         result_counter += 1
                         
                 # 2. الثبات
                 if len(active_questions) > 1:
                     a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
-                    st.markdown(f"**النتيجة ({result_counter}):** بلغ معامل الثبات الكلي (ألفا كرونباخ) لأداة الدراسة ({round(a_total, 3)}).")
+                    txt = f"بلغ معامل كرونباخ ألفا ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({'جيد' if a_total >= 0.7 else 'ضعيف'}) من الثبات الداخلي." if lang=="العربية" else f"Cronbach's Alpha is ({round(a_total, 3)})."
+                    st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
                     result_counter += 1
                     
-                # 3. المحاور (مستويات التقييم) - بدون رسم بياني
-                hypotheses_list = []  # لتخزين الفرضيات لدالة analyze_hypothesis_smart
-                
+                # 3. المحاور (مستويات التقييم فقط نص)
+                dim_recs = [] # لتجهيز التوصيات لتبويب 9
                 for dim_name, cols in dimensions_dict.items():
                     if cols:
                         item_means = df_encoded[cols].mean()
                         overall_mean = item_means.mean()
                         level = get_level(overall_mean)
-                        st.markdown(f"**النتيجة ({result_counter}):** جاء محور ({dim_name}) بمستوى تقييم ({level}) بمتوسط حسابي ({round(overall_mean, 2)}).")
+                        txt = f"جاء محور ({dim_name}) بمستوى تقييم ({level}) بمتوسط حسابي ({round(overall_mean, 2)})." if lang=="العربية" else f"Dimension ({dim_name}) achieved ({level}) level with mean ({round(overall_mean, 2)})."
+                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {txt}")
+                        result_counter += 1
                         
-                        # تجهيز الفرضيات للدالة الذكية
-                        hypotheses_list.append({
-                            'name': f"مستوى محور {dim_name}",
-                            'p_value': 0.01 if overall_mean >= 3.0 else 0.15  # مثال توضيحي
-                        })
+                        # تجهيز التوصيات لتبويب 9
+                        lows = item_means[item_means <= 3.50]
+                        if not lows.empty:
+                            for item_text, mean_val in lows.items():
+                                dim_recs.append({"dim": dim_name, "mean": round(mean_val, 2), "rec": f"توصي الدراسة بضرورة تحسين ({item_text}) ورفع مستواه لتطوير الأداء." if lang=="العربية" else f"Improve ({item_text})."})
+                        else:
+                            dim_recs.append({"dim": dim_name, "mean": round(item_means.min(), 2), "rec": f"توصي الدراسة بضرورة المحافظة على ({item_means.idxmin()}) وتعزيزه." if lang=="العربية" else f"Maintain ({item_means.idxmin()})."})
+
+                # 4. الفرضيات
+                if 'hypothesis_history' in st.session_state and st.session_state['hypothesis_history']:
+                    st.markdown("---")
+                    st.markdown("#### ⚖️ نتائج اختبار الفرضيات" if lang=="العربية" else "#### ⚖️ Hypotheses Results")
+                    for h in st.session_state['hypothesis_history']:
+                        d_str = ("تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية") if lang=="العربية" else ("Accepted" if h['result'] == "accepted" else "Rejected")
+                        st.markdown(f"**{'النتيجة' if lang=='العربية' else 'Result'} ({result_counter}):** - {d_str} ({h['text']}).")
+                        if lang=="العربية":
+                            st.info("تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم. وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة. كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار. وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة. ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال. وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.")
                         result_counter += 1
 
-                # ✅ استخدام دالة analyze_hypothesis_smart لعرض النتائج
-                if hypotheses_list:
-                    st.markdown("### 🔍 تحليل الفرضيات الذكي")
-                    smart_results = analyze_hypothesis_smart(hypotheses_list)
-                    st.markdown(smart_results)
-                
-                st.markdown("---")
-                st.info("💡 ملاحظة: تم عرض النتائج بشكل نصي منظم بدون رسوم بيانية حسب طلبك.")
-
             # ==========================================
-            # ✅ 9. التبويب التاسع: التوصيات (بدون رسوم بيانية)
+            # 9. التوصيات (تبويب مستقل) ✅
             # ==========================================
             with tab9:
-                st.header("💡 التوصيات الذكية للدراسة")
-                st.markdown("### 📌 التوصيات بناءً على المتوسطات الحسابية")
-                
-                recommendations = []
-                
-                for dim_name, cols in dimensions_dict.items():
-                    if cols:
-                        item_means = df_encoded[cols].mean()
-                        # التوصيات للعناصر ذات المتوسط المنخفض (<= 3.50)
-                        low_items = item_means[item_means <= 3.50]
-                        if not low_items.empty:
-                            for item_text, mean_val in low_items.items():
-                                recommendations.append({
-                                    "المحور": dim_name,
-                                    "الفقرة": item_text,
-                                    "المتوسط": round(mean_val, 2),
-                                    "التوصية": f"توصي الدراسة بضرورة تحسين ({item_text}) من خلال تطوير الممارسات المرتبطة بها، والعمل على رفع مستواها بما يسهم في تعزيز الأداء وتحقيق نتائج أفضل."
-                                })
-                        # توصيات للمحافظة على العناصر القوية
-                        else:
-                            lowest_item_text = item_means.idxmin()
-                            lowest_mean_val = item_means.min()
-                            recommendations.append({
-                                "المحور": dim_name,
-                                "الفقرة": lowest_item_text,
-                                "المتوسط": round(lowest_mean_val, 2),
-                                "التوصية": f"توصي الدراسة بضرورة المحافظة على مستوى ({lowest_item_text}) والعمل على تعزيزه بشكل مستمر، لما له من دور مهم في دعم هذا البعد وتحقيق الكفاءة المطلوبة."
-                            })
-
-                # عرض التوصيات بشكل منظم
-                if recommendations:
-                    for idx, rec in enumerate(recommendations, 1):
-                        with st.expander(f"📌 التوصية رقم ({idx}): {rec['المحور']} - {rec['الفقرة']}"):
-                            st.markdown(f"""
-                            **📊 البيانات:**
-                            - المحور: {rec['المحور']}
-                            - الفقرة: {rec['الفقرة']}
-                            - المتوسط الحسابي: {rec['المتوسط']}
-                            
-                            **💡 التوصية:**
-                            {rec['التوصية']}
-                            """)
+                st.header("💡 التوصيات الذكية" if lang=="العربية" else "💡 Smart Recommendations")
+                if dim_recs:
+                    for idx, rec in enumerate(dim_recs, 1):
+                        st.success(f"**{idx}. {'المحور' if lang=='العربية' else 'Dim'}:** {rec['dim']} | **{'المتوسط' if lang=='العربية' else 'Mean'}:** {rec['mean']}\n\n📌 {rec['rec']}")
                 else:
-                    st.success("✅ جميع الفقرات بمستويات جيدة، لا توجد توصيات تحسين عاجلة حالياً.")
-                
-                st.markdown("---")
-                st.info("💡 ملاحظة: تم عرض التوصيات بشكل نصي منظم بدون رسوم بيانية حسب طلبك.")
+                    st.warning("لا توجد توصيات حالياً. تأكد من تحديد الأسئلة واختبار المحاور." if lang=="العربية" else "No recommendations yet.")
 
-    except Exception as e: 
-        st.error(f"حدث خطأ أثناء قراءة الملف. تأكد من أن الملف ليس فارغاً وأن صيغته صحيحة. التفاصيل: {e}")
-
-# ==========================================
-# ✅ CSS لإصلاح تنسيق النص العربي والخطوط
-# ==========================================
-st.markdown("""
-<style>
-    /* ضبط اتجاه النص العربي لليمين */
-    .stMarkdown, .stDataFrame, .stMetric, .stAlert, .stSuccess, .stWarning, .stError, .stInfo,
-    .stExpander, .stTabs, .stSelectbox, .stMultiselect, .stTextInput, .stTextArea {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    
-    /* ضبط الجداول */
-    div[data-testid="stDataFrame"] table {
-        direction: rtl !important;
-    }
-    div[data-testid="stDataFrame"] th, 
-    div[data-testid="stDataFrame"] td {
-        text-align: right !important;
-        padding: 8px 12px !important;
-    }
-    
-    /* العناوين */
-    h1, h2, h3, h4, h5, h6 {
-        direction: rtl !important;
-        text-align: right !important;
-        font-weight: 700 !important;
-        margin-bottom: 1rem !important;
-    }
-    
-    /* الأزرار */
-    .stButton > button {
-        direction: rtl !important;
-        text-align: center !important;
-        border-radius: 8px !important;
-    }
-    
-    /* الحقول النصية */
-    .stTextInput input, .stTextArea textarea {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    
-    /* القائمة الجانبية */
-    section[data-testid="stSidebar"] {
-        direction: rtl !important;
-    }
-    
-    /* التبويبات */
-    .stTabs [data-baseweb="tab-list"] {
-        direction: rtl !important;
-        gap: 10px !important;
-    }
-    
-    /* الرسوم البيانية تبقى LTR */
-    .plotly-graph-div {
-        direction: ltr !important;
-    }
-    
-    /* خط عربي جميل وواضح */
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
-    
-    body, .stApp, div, span, p, label, button, input, textarea, h1, h2, h3, h4, h5, h6 {
-        font-family: 'Tajawal', 'Segoe UI', Arial, sans-serif !important;
-        line-height: 1.6 !important;
-    }
-    
-    /* تحسين المسافات والقراءة */
-    .stMarkdown p {
-        line-height: 1.8 !important;
-        margin-bottom: 12px !important;
-        font-size: 1.05rem !important;
-    }
-    
-    /* تحسين الجداول */
-    .stDataFrame {
-        border-radius: 8px !important;
-        overflow: hidden !important;
-    }
-    
-    /* تحسين البطاقات والمربعات */
-    .stInfo, .stSuccess, .stWarning, .stError {
-        border-radius: 8px !important;
-        padding: 12px 16px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+    except Exception as e: st.error(f"حدث خطأ أثناء معالجة البيانات: {e}")
