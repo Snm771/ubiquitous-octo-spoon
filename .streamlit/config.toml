@@ -4,3 +4,7 @@ backgroundColor="#F4F6F9"
 secondaryBackgroundColor="#FFFFFF"
 textColor="#1E1E1E"
 font="sans serif"
+[theme]
+primaryColor="#2a5298"
+# حذفنا الألوان الثابتة للخلفية لكي يعمل الدارك ثيم الخاص بـ Streamlit تلقائياً
+font="sans serif"
