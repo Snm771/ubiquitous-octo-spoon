@@ -326,60 +326,29 @@ if uploaded_file is not None:
                     st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
 
             # ==========================================
-            # 4. دلالة الفروق
+            # 3. الثبات (مع الحفظ التلقائي للنتيجة رقم 2)
             # ==========================================
-            with tab4:
-                st.subheader("⚖️ دلالة الفروق (T-test و ANOVA)")
-                if categorical_cols and analysis_cols:
-                    g_col = st.selectbox("المتغير المستقل (ديموغرافي):", categorical_cols, key="g_f")
-                    t_col = st.selectbox("المتغير التابع (المحور المراد اختباره):", analysis_cols, index=len(analysis_cols)-1, key="t_f")
-                    
-                    temp_df = df_encoded[[g_col, t_col]].copy()
-                    temp_df[t_col] = pd.to_numeric(temp_df[t_col], errors='coerce')
-                    res_data = temp_df.dropna()
-                    grps = res_data[g_col].unique()
-                    
-                    if len(grps) < 2:
-                        st.warning("⚠️ لا توجد مجموعات كافية للمقارنة في هذا المتغير.")
-                    else:
-                        try:
-                            if len(grps) == 2:
-                                st.markdown(f"**نوع الاختبار:** `T-test لعينتين مستقلتين`")
-                                g1 = res_data[res_data[g_col]==grps[0]][t_col].astype(float).values
-                                g2 = res_data[res_data[g_col]==grps[1]][t_col].astype(float).values
-                                res = pg.ttest(g1, g2)
-                                st.dataframe(res)
-                                pval = res['p-val'].values[0] if 'p-val' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
-                                
-                                st.markdown("### 📝 التفسير الأكاديمي:")
-                                if pval < 0.05: 
-                                    st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
-                                    st.info(f"أشارت مخرجات اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) إلى وجود فروق جوهرية ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين فئات المتغير المستقل ({g_col}) فيما يتعلق بمحور ({t_col}). يعكس هذا التباين بشكل جلي تأثير الخصائص الديموغرافية للفئة على اتجاهات واستجابات المبحوثين.")
-                                else: 
-                                    st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
-                                    st.info(f"بينت نتائج اختبار (ت) لعينتين مستقلتين (Independent Samples T-test) عدم ثبوت أي فروق ذات دلالة إحصائية عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة باختلاف فئاتهم في متغير ({g_col}) تجاه محور ({t_col}). يُفسر هذا إحصائياً بوجود حالة من التجانس والتقارب الكبير في آراء واتجاهات المبحوثين بغض النظر عن اختلاف تصنيفاتهم.")
-                                    
-                            elif len(grps) > 2:
-                                st.markdown(f"**نوع الاختبار:** `تحليل التباين الأحادي (ANOVA)`")
-                                counts = res_data[g_col].value_counts()
-                                valid_grps = counts[counts >= 2].index
-                                clean_anova = res_data[res_data[g_col].isin(valid_grps)]
-                                res = pg.anova(data=clean_anova, dv=t_col, between=g_col)
-                                st.dataframe(res)
-                                pval = res['p-unc'].values[0] if 'p-unc' in res.columns else (res['p-value'].values[0] if 'p-value' in res.columns else 1.0)
-                                
-                                st.markdown("### 📝 التفسير الأكاديمي:")
-                                if pval < 0.05: 
-                                    st.success("✅ **توجد فروق ذات دلالة إحصائية.**")
-                                    st.info(f"أظهرت المعطيات الإحصائية المستخلصة من تحليل التباين الأحادي (One-Way ANOVA) وجود فروق ذات دلالة إحصائية واضحة عند مستوى الدلالة ($\le 0.05$) بين استجابات أفراد العينة تُعزى للتصنيفات المختلفة في متغير ({g_col}) ضمن محور ({t_col}). وهذا يؤكد أن المتغير الديموغرافي يلعب دوراً محورياً وجوهرياً في تشكيل آراء المبحوثين وتوجيه استجاباتهم.")
-                                else: 
-                                    st.warning("⚠️ **لا توجد فروق ذات دلالة إحصائية.**")
-                                    st.info(f"أوضحت المخرجات الإحصائية لتحليل التباين الأحادي (One-Way ANOVA) عدم وجود أي فروق ذات دلالة إحصائية عند مستوى الدلالة المرجعي ($\le 0.05$) بين فئات متغير ({g_col}) فيما يتعلق بتقييمهم لمحور ({t_col}). يعكس هذا الاستقرار الإحصائي إجماعاً عاماً وتوافقاً ملحوظاً من قبل أفراد العينة على فقرات هذا المحور.")
-                                    
-                            st.plotly_chart(px.box(res_data, x=g_col, y=t_col, color=g_col), use_container_width=True)
-                        except Exception as e: 
-                            st.warning(f"تعذر حساب الفروق بسبب تعقيد البيانات: {e}")
+            with tab3:
+                st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
+                alpha_results = []
+                for dim_name, cols in dimensions_dict.items():
+                    if len(cols) > 1:
+                        a_val = pg.cronbach_alpha(data=df_encoded[cols].dropna())[0]
+                        alpha_results.append({"المحور / البعد": dim_name, "عدد العبارات": len(cols), "معامل ألفا": round(a_val, 3)})
+                
+                if len(active_questions) > 1:
+                    a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
+                    alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
 
+                    # 👇=== كود حفظ النتيجة رقم 2 في الذاكرة بصمت ===👇
+                    eval_text = "جيد" if a_total >= 0.7 else "ضعيف"
+                    st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({eval_text}) من الثبات الداخلي."
+                    # 👆==========================================👆
+
+                if alpha_results:
+                    st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
+                    st.markdown("### 📝 التفسير الأكاديمي:")
+                    st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
             # ==========================================
             # 5. الارتباط
             # ==========================================
