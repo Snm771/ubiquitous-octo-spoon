@@ -83,46 +83,64 @@ if lang == "العربية":
     """, unsafe_allow_html=True)
 else:
     st.markdown("""<style>.stApp { direction: ltr !important; text-align: left !important; }</style>""", unsafe_allow_html=True)
-# 👇=== 🌟 كود الفخامة واللمسات الاحترافية (UI Enhancements) 🌟 ===👇
+# 👇=== 🌟 كود الواجهة الاحترافية الشاملة (ثيم متكيف + فخامة) 🌟 ===👇
 st.markdown("""
     <style>
-    /* 1. جعل الأزرار فخمة مع تأثير تفاعلي عند مرور الماوس */
-    .stButton > button {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
-        color: white !important;
-        border-radius: 12px !important;
-        border: none !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-        transition: all 0.3s ease !important;
-        font-weight: bold !important;
-    }
-    .stButton > button:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 15px rgba(0,0,0,0.2) !important;
-        background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%) !important;
-    }
-
-    /* 2. جعل حقول الإدخال والقوائم المنسدلة تبدو عصرية */
+    /* 1. تأثير البطاقات الزجاجية الفخمة للحقول والمدخلات */
     .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea {
-        border-radius: 10px !important;
-        border: 1px solid #e0e0e0 !important;
-        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05) !important;
-        transition: border-color 0.3s ease !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(128, 128, 128, 0.2) !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
+    
     .stSelectbox div[data-baseweb="select"] > div:hover, .stTextInput input:hover {
         border-color: #2a5298 !important;
+        box-shadow: 0 0 15px rgba(42, 82, 152, 0.2) !important;
     }
 
-    /* 3. تجميل القوائم الجانبية (Expanders) لتشبه البطاقات */
-    .streamlit-expanderHeader {
-        background-color: #f8f9fa !important;
-        border-radius: 10px !important;
-        border: 1px solid #eef2f5 !important;
-    }
-    [data-testid="stExpander"] {
-        box-shadow: 0 2px 10px rgba(0,0,0,0.03) !important;
-        border-radius: 10px !important;
+    /* 2. الأزرار الاحترافية بتأثير الـ Gradient المتطور */
+    .stButton > button {
+        background: linear-gradient(145deg, #1e3c72 0%, #2a5298 100%) !important;
+        color: white !important;
+        border-radius: 14px !important;
         border: none !important;
+        padding: 0.6rem 2rem !important;
+        box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3) !important;
+        transition: all 0.3s ease !important;
+        width: auto !important;
+        min-width: 150px;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.03) translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4) !important;
+        filter: brightness(1.2);
+    }
+
+    /* 3. تجميل الـ Expanders لتكون كأنها أجزاء من لوحة تحكم سيارة فارهة */
+    .streamlit-expanderHeader {
+        background-color: rgba(128, 128, 128, 0.05) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(128, 128, 128, 0.1) !important;
+        padding: 10px 15px !important;
+    }
+    
+    [data-testid="stExpander"] {
+        border: none !important;
+        background-color: rgba(128, 128, 128, 0.02) !important;
+        margin-bottom: 15px !important;
+    }
+
+    /* 4. لمسة إبداعية لشريط التبويبات (Tabs) */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #2a5298 !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px;
     }
     </style>
 """, unsafe_allow_html=True)
