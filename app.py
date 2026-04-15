@@ -412,7 +412,7 @@ if uploaded_file is not None:
                                 st.info(f"سعياً للتحقق من القدرة التنبؤية للمتغيرات المستقلة ومعرفة حجم أثرها الفعلي، تم إجراء تحليل الانحدار الخطي لقياس أثر المتغيرات المُدخلة على المتغير التابع ({dep_var}). وتشير المخرجات الإحصائية إلى أن النموذج المقترح يمتلك قدرة تفسيرية ملحوظة. استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$)، يمكن الاستنتاج علمياً بأن المتغيرات المستقلة المُدرجة قادرة مجتمعة على تفسير والتحكم بما نسبته **({float(r2)*100:.1f}%)** من إجمالي التباين الحاصل في المتغير التابع.")
                             except: st.error("حدث خطأ في الانحدار.")
 
-            # ==========================================
+           # ==========================================
             # 7. التبويب السابع: محلل الفرضيات الذكي (7 فرضيات + تحديد آلي)
             # ==========================================
             with tab7:
@@ -465,6 +465,43 @@ if uploaded_file is not None:
                                         results_str = ""
                                         try:
                                             if "علاقة" in col_type:
+                                                res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
+                                                results_str = res.to_markdown()
+                                                st.dataframe(res)
+                                            elif "تأثير" in col_type:
+                                                res = pg.linear_regression(clean_df[[h_indep]].astype(float), clean_df[h_dep].astype(float))
+                                                results_str = res.to_markdown()
+                                                st.dataframe(res)
+                                            elif "فروق" in col_type:
+                                                grps = clean_df[h_indep].unique()
+                                                if len(grps) == 2: res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
+                                                else:
+                                                    valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
+                                                    res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
+                                                results_str = res.to_markdown()
+                                                st.dataframe(res)
+                                            
+                                            final_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
+                                            st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
+                                            st.success(final_explanation)
+                                            
+                                            # حفظ الفرضية في تبويب النتائج (تحديث إذا كانت موجودة)
+                                            decision_val = "accepted" if ("True" in str(res) or "reject H0" in str(res).lower() or (('p-val' in res.columns and res['p-val'].values[0] < 0.05) or ('p-unc' in res.columns and res['p-unc'].values[0] < 0.05))) else "rejected"
+                                            
+                                            found = False
+                                            for item in st.session_state['hypothesis_history']:
+                                                if item.get('id') == i:
+                                                    item['text'] = u_hypo
+                                                    item['result'] = decision_val
+                                                    found = True
+                                                    break
+                                            if not found:
+                                                st.session_state['hypothesis_history'].append({'id': i, 'text': u_hypo, 'result': decision_val})
+                                                
+                                            st.info("✅ تم حفظ نتيجة هذه الفرضية لتظهر في تبويب النتائج والتوصيات.")
+                                            
+                                        except Exception as e:
+                                            st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
 
           # ==========================================
             # 8. تبويب النتائج (مستقل وبدون رسوم بيانية) ✅
