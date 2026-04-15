@@ -24,10 +24,24 @@ if 'dim_recs' not in st.session_state:
 # ==========================================
 # 🌍 1. نظام اللغات والتنسيق المتقدم (RTL / LTR)
 # ==========================================
+# 1. تعريف لغة الواجهة
 if 'lang' not in st.session_state:
     st.session_state.lang = "العربية"
 
-# حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط والتبويبات
+# 👇=== 2. تأكد من وجود كل المخازن هنا في الأعلى لمنع الأخطاء الحمراء ===👇
+if 'hypothesis_history' not in st.session_state:
+    st.session_state['hypothesis_history'] = []
+if 'sample_results' not in st.session_state:
+    st.session_state['sample_results'] = []
+if 'reliability_result' not in st.session_state:
+    st.session_state['reliability_result'] = ""
+if 'dim_recs' not in st.session_state:
+    st.session_state['dim_recs'] = []
+# 👆================================================================👆
+
+lang = st.sidebar.radio("🌍 اختر لغة الواجهة / Choose Language", ["العربية", "English"])
+
+# 3. حقن كود CSS لإصلاح مشاكل اللغة العربية وتحسين الخط (النسخة المتجاوبة والاحترافية)
 if lang == "العربية":
     st.markdown("""
         <style>
@@ -270,7 +284,7 @@ if uploaded_file is not None:
                             st.dataframe(demo_df_with_total, use_container_width=True)
                             chart_type_demo = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
                             
-                       with col2: 
+                        with col2: 
                             if chart_type_demo == "دائري (Pie)":
                                 fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
                             elif chart_type_demo == "أعمدة (Bar)":
@@ -282,7 +296,7 @@ if uploaded_file is not None:
                             else:
                                 fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
                             
-                            # 👇=== أضف هذا الكود هنا لترتيب الـ Legend ومنع قص النص ===👇
+                            # 👇=== التعديل السحري لترتيب مفتاح الرسم (Legend) ومنع قص النص ===👇
                             fig.update_layout(
                                 legend=dict(
                                     orientation="h",
@@ -298,11 +312,13 @@ if uploaded_file is not None:
                             st.plotly_chart(fig, use_container_width=True)
                         
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
-                        # 👇=== أضف هذا الكود للحفظ بصمت ===👇
+                        
+                        # 👇=== كود الحفظ بصمت ===👇
                         res_txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({counts.idxmax()}) بنسبة ({percentages.max():.1f}%)."
                         if res_txt not in st.session_state['sample_results']:
                             st.session_state['sample_results'].append(res_txt)
                         # 👆==============================👆
+                        
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
