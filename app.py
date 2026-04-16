@@ -31,6 +31,7 @@ if 'dim_recs' not in st.session_state:
 # ==========================================
 lang = st.sidebar.radio("🌍 Language / لغة الواجهة", ["العربية", "English"])
 
+# 👇 هذه هي دالة الترجمة السحرية
 def tr(ar_text, en_text):
     return ar_text if lang == "العربية" else en_text
 
