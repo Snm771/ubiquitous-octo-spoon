@@ -554,24 +554,73 @@ if uploaded_file is not None:
             # ==========================================
             with tab3:
                 st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
+                
+                # 🔹 1. دالة التقييم الدقيق (مقتبسة من كود أختك)
+                def evaluate_alpha(alpha):
+                    if alpha < 0.60: return "ضعيف (مرفوض)"
+                    elif alpha < 0.70: return "مقبول"
+                    elif alpha < 0.80: return "جيد"
+                    elif alpha < 0.90: return "مرتفع"
+                    else: return "مرتفع جداً"
+
                 alpha_results = []
+                suggestions = [] # لحفظ مقترحات تحسين الثبات (فكرة أختك)
+
                 for dim_name, cols in dimensions_dict.items():
                     if len(cols) > 1:
-                        a_val = pg.cronbach_alpha(data=df_encoded[cols].dropna())[0]
-                        alpha_results.append({"المحور / البعد": dim_name, "عدد العبارات": len(cols), "معامل ألفا": round(a_val, 3)})
-                
-                if len(active_questions) > 1:
-                    a_total = pg.cronbach_alpha(data=df_encoded[active_questions].dropna())[0]
-                    alpha_results.append({"المحور / البعد": "الاستبيان ككل", "عدد العبارات": len(active_questions), "معامل ألفا": round(a_total, 3)})
-                # 👇=== أضف هذا الكود للحفظ بصمت ===👇
-                    eval_text = "جيد" if a_total >= 0.7 else "ضعيف"
-                    st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يشير إلى مستوى ({eval_text}) من الثبات الداخلي."
-                    # 👆==============================👆
-                if alpha_results:
-                    st.dataframe(pd.DataFrame(alpha_results), use_container_width=True)
-                    st.markdown("### 📝 التفسير الأكاديمي:")
-                    st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها في قياس الأبعاد التي أُعدت لقياسها. وكلما اقتربت القيمة من الواحد الصحيح (1.00) دلّ ذلك على موثوقية ممتازة.")
+                        clean_data = df_encoded[cols].dropna()
+                        a_val = pg.cronbach_alpha(data=clean_data)[0]
+                        eval_text = evaluate_alpha(a_val)
+                        
+                        alpha_results.append({
+                            "المحور / البعد": dim_name, 
+                            "عدد العبارات": len(cols), 
+                            "معامل ألفا": round(a_val, 3),
+                            "التقييم": eval_text
+                        })
 
+                        # 🔹 2. خوارزمية اكتشاف الأسئلة الضعيفة (مبنية على فكرة أختك)
+                        # تعمل فقط إذا كان الثبات يحتاج تحسين (أقل من 0.85)
+                        if a_val < 0.85:
+                            best_a = a_val
+                            bad_item = None
+                            for col in cols:
+                                temp_cols = [c for c in cols if c != col]
+                                if len(temp_cols) > 1:
+                                    new_a = pg.cronbach_alpha(data=clean_data[temp_cols])[0]
+                                    if new_a > best_a:
+                                        best_a = new_a
+                                        bad_item = col
+                            if bad_item:
+                                suggestions.append(f"⚠️ في محور **({dim_name})**: حذف السؤال `[{bad_item}]` سيرفع الثبات من **{round(a_val, 3)}** إلى **{round(best_a, 3)}**.")
+
+                if len(active_questions) > 1:
+                    clean_all = df_encoded[active_questions].dropna()
+                    a_total = pg.cronbach_alpha(data=clean_all)[0]
+                    total_eval = evaluate_alpha(a_total)
+                    
+                    alpha_results.append({
+                        "المحور / البعد": "الاستبيان ككل", 
+                        "عدد العبارات": len(active_questions), 
+                        "معامل ألفا": round(a_total, 3),
+                        "التقييم": total_eval
+                    })
+                    
+                    # 🔹 3. الحفظ بصمت في الذاكرة لتبويب النتائج
+                    st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يعكس مستوى ({total_eval}) من الاتساق الداخلي."
+
+                if alpha_results:
+                    st.dataframe(pd.DataFrame(alpha_results).style.highlight_max(subset=['معامل ألفا'], color='rgba(212, 175, 55, 0.2)'), use_container_width=True)
+                    
+                    # 🔹 4. عرض مقترحات التحسين كـ "خبير ذكي"
+                    if suggestions:
+                        with st.expander("💡 مقترحات الخبير الذكي لتحسين الثبات (Item-Drop Analysis)"):
+                            st.info("اكتشف النظام أن بعض الأسئلة تشتت إجابات العينة وتضعف الثبات العام للمحاور. إليك مقترحات الحذف:")
+                            for sug in suggestions:
+                                st.warning(sug)
+
+                    st.markdown("### 📝 التفسير الأكاديمي:")
+                    st.info("تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة الدراسة تتمتع بدرجة من الاتساق الداخلي. يُعد هذا المعامل مؤشراً علمياً دقيقاً على مدى تجانس فقرات الاستبيان وترابطها. وفقاً للمعايير الإحصائية المعتمدة، تم تصنيف مستويات الثبات لكل محور كما هو موضح في الجدول أعلاه.")
             # ==========================================
             # 4. دلالة الفروق
             # ==========================================
