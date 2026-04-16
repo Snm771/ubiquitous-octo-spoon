@@ -269,11 +269,98 @@ def smart_classify_columns(df):
     return categorical_cols, numeric_cols
 
 # ==========================================
-# واجهة المستخدم الأساسية
+# 🌟 واجهة المستخدم الاحترافية (Hero Section) 🌟
 # ==========================================
-st.title("📊 SmartStat Pro - نظام الخبير الإحصائي الآلي")
-st.markdown("يُرفق النظام الآن **تفسيراً أكاديمياً** مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج.")
-st.markdown("---")
+hero_title = "نظام الخبير الإحصائي الآلي" if lang == "العربية" else "Automated Statistical Expert"
+hero_desc = "يُرفق النظام الآن تفسيراً أكاديمياً دقيقاً مع كل نتيجة إحصائية (وصفي، عينة، فروق، ارتباط، انحدار) جاهز للنسخ المباشر في فصول مناقشة النتائج بضغطة زر." if lang == "العربية" else "The system now attaches an accurate academic explanation with every statistical result, ready for direct copying into discussion chapters with one click."
+badge_text = "✨ الإصدار الاحترافي PRO" if lang == "العربية" else "✨ PRO VERSION"
+
+st.markdown(f"""
+    <style>
+    /* 1. تصميم القسم الترحيبي (Hero Banner) */
+    .hero-container {{
+        background: linear-gradient(135deg, rgba(42, 82, 152, 0.05) 0%, rgba(212, 175, 55, 0.05) 100%);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 24px;
+        padding: 3rem 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+        backdrop-filter: blur(10px);
+    }}
+    
+    /* خط ذهبي لامع أعلى البطاقة */
+    .hero-container::before {{
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 4px;
+        background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    }}
+
+    /* 2. الشارة العلوية (Badge) */
+    .hero-badge {{
+        display: inline-block;
+        background: rgba(212, 175, 55, 0.1);
+        color: #d4af37;
+        padding: 6px 20px;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+    }}
+
+    /* 3. العنوان الرئيسي (متدرج الألوان ومبهر) */
+    .hero-title {{
+        font-size: 3.2rem !important;
+        font-weight: 900 !important;
+        margin-bottom: 1rem !important;
+        /* تدرج لوني يجمع بين الأزرق الليلي والذهبي */
+        background: linear-gradient(45deg, #1e3c72, #d4af37);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.2;
+    }}
+    .hero-title span {{
+        color: #1e1e1e;
+        -webkit-text-fill-color: #1e1e1e;
+    }}
+
+    /* 4. الوصف أسفل العنوان */
+    .hero-subtitle {{
+        font-size: 1.15rem !important;
+        color: #666;
+        max-width: 800px;
+        margin: 0 auto !important;
+        line-height: 1.8 !important;
+    }}
+
+    /* 5. ترقية منطقة رفع الملفات لتكون جزءاً من الفخامة */
+    [data-testid="stFileUploadDropzone"] {{
+        background-color: rgba(255, 255, 255, 0.6) !important;
+        border: 2px dashed rgba(42, 82, 152, 0.3) !important;
+        border-radius: 20px !important;
+        padding: 3rem !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }}
+    [data-testid="stFileUploadDropzone"]:hover {{
+        background-color: rgba(255, 255, 255, 1) !important;
+        border: 2px dashed #d4af37 !important;
+        box-shadow: 0 15px 40px rgba(212, 175, 55, 0.15) !important;
+        transform: translateY(-5px);
+    }}
+    </style>
+
+    <div class="hero-container">
+        <div class="hero-badge">{badge_text}</div>
+        <h1 class="hero-title">SmartStat <span>Pro</span></h1>
+        <p class="hero-subtitle">{hero_desc}</p>
+    </div>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # سحب مفتاح الذكاء الاصطناعي تلقائياً
