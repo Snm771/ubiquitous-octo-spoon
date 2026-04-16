@@ -46,11 +46,11 @@ else:
     font_family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
 
 # ==========================================
-# 3. 🌟 كود الواجهة الاحترافية الشاملة (ثيم زجاجي متكيف + اتجاهات) 🌟
+# 3. 🌟 كود الواجهة الاحترافية الشاملة (ثيم زجاجي + إطار فخم + حركات) 🌟
 # ==========================================
 st.markdown(f"""
     <style>
-    /* التوجيه والخطوط الشاملة */
+    /* 🌟 التوجيه والخطوط الشاملة 🌟 */
     .block-container, [data-testid="stSidebar"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, label, li {{
         direction: {direction} !important;
         text-align: {align} !important;
@@ -60,6 +60,41 @@ st.markdown(f"""
     [data-testid="stHeader"] {{
         direction: ltr !important;
         background-color: transparent !important;
+    }}
+
+    /* 🌟 الإطار الفخم المحيط بكامل التطبيق 🌟 */
+    .block-container {{
+        border-radius: 20px !important;
+        padding: 3rem 2rem !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+        border-top: 5px solid #d4af37 !important; /* لمسة ذهبية معدنية فخمة */
+        background: rgba(255, 255, 255, 0.03) !important;
+        backdrop-filter: blur(15px) !important;
+        margin-top: 2rem !important;
+        margin-bottom: 2rem !important;
+    }}
+
+    /* 🌟 منطقة رفع الملفات (تهتز وتضيء) 🌟 */
+    [data-testid="stFileUploadDropzone"] {{
+        border: 2px dashed rgba(212, 175, 55, 0.6) !important;
+        border-radius: 20px !important;
+        background: linear-gradient(145deg, rgba(0,0,0,0.02), rgba(212, 175, 55, 0.05)) !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }}
+
+    /* حركة الاهتزاز السلسة */
+    @keyframes shake {{
+        0%, 100% {{ transform: translateX(0); }}
+        20%, 60% {{ transform: translateX(-5px) rotate(-2deg); }}
+        40%, 80% {{ transform: translateX(5px) rotate(2deg); }}
+    }}
+
+    /* التفعيل عند مرور الماوس */
+    [data-testid="stFileUploadDropzone"]:hover {{
+        animation: shake 0.5s ease-in-out !important;
+        border: 2px solid #d4af37 !important; /* توهج ذهبي */
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3) !important;
+        background: rgba(212, 175, 55, 0.1) !important;
     }}
 
     /* تصميم التبويبات الفخم */
@@ -78,11 +113,11 @@ st.markdown(f"""
         letter-spacing: 0.5px;
     }}
     .stTabs [data-baseweb="tab-highlight"] {{
-        background-color: #2a5298 !important;
+        background-color: #d4af37 !important; /* مؤشر التبويب ذهبي */
     }}
 
-    /* تأثير البطاقات الزجاجية للحقول والمدخلات (Glassmorphism) */
-    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea, .stFileUploader {{
+    /* تأثير البطاقات الزجاجية للحقول والمدخلات */
+    .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea {{
         background-color: rgba(255, 255, 255, 0.05) !important;
         backdrop-filter: blur(10px) !important;
         border-radius: 12px !important;
@@ -91,27 +126,27 @@ st.markdown(f"""
     }}
     
     .stSelectbox div[data-baseweb="select"] > div:hover, .stTextInput input:hover {{
-        border-color: #2a5298 !important;
-        box-shadow: 0 0 15px rgba(42, 82, 152, 0.2) !important;
+        border-color: #d4af37 !important;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
     }}
 
-    /* الأزرار الاحترافية بتأثير Gradient المتطور */
+    /* الأزرار الاحترافية (تصميم أسود أنيق مع ذهبي) */
     .stButton > button {{
-        background: linear-gradient(145deg, #1e3c72 0%, #2a5298 100%) !important;
-        color: white !important;
+        background: linear-gradient(145deg, #1a1a1a 0%, #333 100%) !important;
+        color: #d4af37 !important;
         border-radius: 14px !important;
-        border: none !important;
+        border: 1px solid #d4af37 !important;
         padding: 0.6rem 2rem !important;
-        box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3) !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
         transition: all 0.3s ease !important;
         width: auto !important;
         min-width: 150px;
     }}
     
     .stButton > button:hover {{
-        transform: scale(1.03) translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4) !important;
-        filter: brightness(1.2);
+        transform: scale(1.05) translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4) !important;
+        background: linear-gradient(145deg, #333 0%, #1a1a1a 100%) !important;
     }}
 
     /* تجميل الـ Expanders لتكون كأنها أجزاء من لوحة تحكم فارهة */
