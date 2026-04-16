@@ -61,8 +61,9 @@ st.markdown(f"""
         font-family: {font_family} !important;
     }}
 
-    [data-testid="stHeader"] {{
-        display: none !important; /* إخفاء الهيدر بالكامل لمظهر أنظف */
+  [data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
     }}
 
     /* 🌟 الإطار الفخم المحيط بكامل التطبيق (خلفية بيضاء ليتناسب مع الثيم الفاتح) 🌟 */
