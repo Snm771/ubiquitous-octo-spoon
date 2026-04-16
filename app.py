@@ -63,7 +63,7 @@ st.markdown(f"""
 
   [data-testid="stHeader"] {
         background-color: transparent !important;
-    }
+    
     }}
 
     /* 🌟 الإطار الفخم المحيط بكامل التطبيق (خلفية بيضاء ليتناسب مع الثيم الفاتح) 🌟 */
