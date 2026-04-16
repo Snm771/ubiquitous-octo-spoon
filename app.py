@@ -61,17 +61,17 @@ st.markdown(f"""
         font-family: {font_family} !important;
     }}
 
- [data-testid="stHeader"] {{
-        background-color: transparent !important;
+    [data-testid="stHeader"] {{
+        background-color: transparent !important; /* الشريط العلوي شفاف */
     }}
 
-    /* 🌟 الإطار الفخم المحيط بكامل التطبيق (خلفية بيضاء ليتناسب مع الثيم الفاتح) 🌟 */
+    /* 🌟 الإطار الفخم المتكيف (يتغير تلقائياً مع الفاتح والداكن) 🌟 */
     .block-container {{
-        background: #ffffff !important;
+        background: var(--background-color) !important;
         border-radius: 20px !important;
         padding: 3rem 2rem !important;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05) !important;
-        border-top: 5px solid #d4af37 !important; /* لمسة ذهبية معدنية فخمة */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+        border-top: 5px solid #d4af37 !important; 
         margin-top: 2rem !important;
         margin-bottom: 2rem !important;
     }}
@@ -82,7 +82,7 @@ st.markdown(f"""
         flex-direction: column !important;
         align-items: center !important; 
         justify-content: center !important;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(212, 175, 55, 0.05));
+        background: linear-gradient(135deg, var(--secondary-background-color), rgba(212, 175, 55, 0.05));
         border: 1px solid rgba(212, 175, 55, 0.2);
         border-radius: 24px;
         padding: 4rem 2rem;
@@ -93,7 +93,7 @@ st.markdown(f"""
     .hero-badge {{
         display: inline-block !important;
         background: linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05));
-        color: #b8962e;
+        color: #d4af37;
         padding: 8px 25px;
         border-radius: 50px;
         font-size: 1rem;
@@ -114,7 +114,8 @@ st.markdown(f"""
     @keyframes shine {{ to {{ background-position: 200% center; }} }}
     .hero-subtitle {{
         font-size: 1.2rem !important;
-        color: #666;
+        color: var(--text-color) !important;
+        opacity: 0.8;
         max-width: 800px;
         margin: 0 auto !important;
         line-height: 1.8 !important;
@@ -139,7 +140,7 @@ st.markdown(f"""
     }}
     [data-testid="stFileUploader"] button, [data-testid="stFileUploadDropzone"] button {{
         background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%) !important;
-        color: #ffffff !important;
+        color: #111 !important;
         font-weight: 900 !important;
         border: none !important;
         border-radius: 10px !important;
@@ -153,7 +154,8 @@ st.markdown(f"""
         filter: brightness(1.1) !important;
     }}
     [data-testid="stFileUploadDropzone"] small, [data-testid="stFileUploadDropzone"] div {{
-        color: #555 !important;
+        color: var(--text-color) !important;
+        opacity: 0.8;
         font-weight: bold !important;
     }}
 
@@ -178,7 +180,8 @@ st.markdown(f"""
 
     /* تأثير البطاقات الزجاجية للحقول والمدخلات */
     .stSelectbox div[data-baseweb="select"] > div, .stTextInput input, .stTextArea textarea {{
-        background-color: #ffffff !important;
+        background-color: var(--secondary-background-color) !important;
+        color: var(--text-color) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(128, 128, 128, 0.2) !important;
         box-shadow: inset 0 2px 5px rgba(0,0,0,0.02) !important;
@@ -189,28 +192,27 @@ st.markdown(f"""
         box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
     }}
 
-    /* الأزرار الاحترافية (تصميم أسود أنيق مع ذهبي) */
+    /* الأزرار الاحترافية (تصميم أنيق مع ذهبي) */
     .stButton > button {{
-        background: linear-gradient(145deg, #1a1a1a 0%, #333 100%) !important;
-        color: #d4af37 !important;
+        background: linear-gradient(145deg, #1e3c72 0%, #2a5298 100%) !important;
+        color: white !important;
         border-radius: 14px !important;
-        border: 1px solid #d4af37 !important;
+        border: none !important;
         padding: 0.6rem 2rem !important;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+        box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3) !important;
         transition: all 0.3s ease !important;
         width: auto !important;
         min-width: 150px;
     }}
     
     .stButton > button:hover {{
-        transform: scale(1.05) translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4) !important;
-        background: linear-gradient(145deg, #333 0%, #1a1a1a 100%) !important;
+        transform: scale(1.03) translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4) !important;
     }}
 
     /* تجميل الـ Expanders لتكون كأنها أجزاء من لوحة تحكم فارهة */
     .streamlit-expanderHeader {{
-        background-color: rgba(128, 128, 128, 0.05) !important;
+        background-color: var(--secondary-background-color) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(128, 128, 128, 0.1) !important;
         padding: 10px 15px !important;
@@ -218,7 +220,7 @@ st.markdown(f"""
     
     [data-testid="stExpander"] {{
         border: none !important;
-        background-color: rgba(128, 128, 128, 0.02) !important;
+        background-color: transparent !important;
         margin-bottom: 15px !important;
     }}
     
@@ -230,7 +232,7 @@ st.markdown(f"""
     
     /* خلفية الشريط الجانبي ولمسة الظل */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #ffffff 0%, rgba(212, 175, 55, 0.05) 100%) !important;
+        background: linear-gradient(180deg, var(--secondary-background-color) 0%, rgba(212, 175, 55, 0.05) 100%) !important;
         border-left: 1px solid rgba(212, 175, 55, 0.2) !important;
         box-shadow: -5px 0 15px rgba(0,0,0,0.03) !important;
     }}
@@ -238,7 +240,7 @@ st.markdown(f"""
     /* 🌟 تجميل المربعات الحمراء (Tags) وتحويلها لذهبي زجاجي 🌟 */
     span[data-baseweb="tag"] {{
         background: linear-gradient(145deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05)) !important;
-        color: #b8962e !important;
+        color: #d4af37 !important;
         border: 1px solid rgba(212, 175, 55, 0.4) !important;
         border-radius: 8px !important;
         font-weight: bold !important;
@@ -252,7 +254,7 @@ st.markdown(f"""
     
     /* تغيير لون علامة (X) داخل التاجز */
     span[data-baseweb="tag"] svg {{
-        fill: #b8962e !important;
+        fill: #d4af37 !important;
     }}
 
     /* 🌟 رسائل النجاح (الخضراء) داخل الشريط الجانبي 🌟 */
@@ -271,7 +273,7 @@ st.markdown(f"""
     
     /* 🌟 أزرار الراديو (اختيار اللغة) 🌟 */
     .stRadio > div {{
-        background: rgba(255,255,255,0.05) !important;
+        background: var(--secondary-background-color) !important;
         padding: 10px !important;
         border-radius: 12px !important;
         border: 1px solid rgba(128,128,128,0.1) !important;
