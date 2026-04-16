@@ -46,7 +46,7 @@ else:
     font_family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
 
 # ==========================================
-# 3. 🌟 كود الواجهة الاحترافية الشاملة (ثيم زجاجي + إطار فخم + حركات) 🌟
+# 3. 🌟 كود الواجهة الاحترافية الشاملة (ثيم زجاجي + إطار فخم + حركات + الشريط الجانبي) 🌟
 # ==========================================
 st.markdown(f"""
     <style>
@@ -164,6 +164,60 @@ st.markdown(f"""
     }}
     
     .stDataFrame div {{ direction: {direction} !important; }}
+
+    /* ========================================= */
+    /* 🌟 7. تجميل الشريط الجانبي (Sidebar PRO) 🌟 */
+    /* ========================================= */
+    
+    /* خلفية الشريط الجانبي ولمسة الظل */
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(212, 175, 55, 0.03) 100%) !important;
+        backdrop-filter: blur(20px) !important;
+        border-left: 1px solid rgba(212, 175, 55, 0.1) !important;
+    }}
+
+    /* 🌟 تجميل المربعات الحمراء (Tags) وتحويلها لذهبي زجاجي 🌟 */
+    span[data-baseweb="tag"] {{
+        background: linear-gradient(145deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05)) !important;
+        color: #b8962e !important;
+        border: 1px solid rgba(212, 175, 55, 0.4) !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        padding: 4px 8px !important;
+        transition: all 0.3s ease !important;
+    }}
+    span[data-baseweb="tag"]:hover {{
+        background: rgba(212, 175, 55, 0.25) !important;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2) !important;
+    }}
+    
+    /* تغيير لون علامة (X) داخل التاجز */
+    span[data-baseweb="tag"] svg {{
+        fill: #b8962e !important;
+    }}
+
+    /* 🌟 رسائل النجاح (الخضراء) داخل الشريط الجانبي 🌟 */
+    [data-testid="stSidebar"] [data-testid="stAlert"] {{
+        background: rgba(212, 175, 55, 0.05) !important;
+        border: 1px solid rgba(212, 175, 55, 0.3) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(10px) !important;
+    }}
+
+    /* 🌟 الخطوط الفاصلة (Dividers) في الشريط الجانبي 🌟 */
+    [data-testid="stSidebar"] hr {{
+        border-top: 1px dashed rgba(212, 175, 55, 0.3) !important;
+        margin: 1.5rem 0 !important;
+    }}
+    
+    /* 🌟 أزرار الراديو (اختيار اللغة) 🌟 */
+    .stRadio > div {{
+        background: rgba(255,255,255,0.05) !important;
+        padding: 10px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(128,128,128,0.1) !important;
+    }}
+
     </style>
 """, unsafe_allow_html=True)
     
