@@ -730,7 +730,7 @@ if uploaded_file is not None:
                                 st.info(f"سعياً للتحقق من القدرة التنبؤية للمتغيرات المستقلة ومعرفة حجم أثرها الفعلي، تم إجراء تحليل الانحدار الخطي لقياس أثر المتغيرات المُدخلة على المتغير التابع ({dep_var}). وتشير المخرجات الإحصائية إلى أن النموذج المقترح يمتلك قدرة تفسيرية ملحوظة. استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$)، يمكن الاستنتاج علمياً بأن المتغيرات المستقلة المُدرجة قادرة مجتمعة على تفسير والتحكم بما نسبته **({float(r2)*100:.1f}%)** من إجمالي التباين الحاصل في المتغير التابع.")
                             except: st.error("حدث خطأ في الانحدار.")
 
-   # ==========================================
+# ==========================================
             # 7. التبويب السابع: المحلل الذكي الهجين (Local Engine + LLM)
             # ==========================================
             with tab7:
@@ -768,35 +768,36 @@ if uploaded_file is not None:
                         if "مباشر وغير مباشر" in t: return "SEM (Structural Equation Modeling)"
                         if "مجتمعه" in t or "ابعاد" in t: return "Multiple Regression"
 
-                        # 🔀 الوساطة والتعديل
-                        if "وسيط" in t or "من خلال" in t: return "Mediation"
-                        if "يختلف تاثير" in t or "يختلف الاثر" in t or "باختلاف" in t or "حسب" in t or "تختلف قوه" in t:
-                            return "Moderation Advanced" if "حسب" in t else "Moderation"
-
-                        # 🔮 التنبؤ والسببية
+                        # 🔮 1. التنبؤ والسببية (لها الأولوية القصوى)
                         if "تنبؤ" in t or "يتنبا" in t: return "Predictive Regression"
                         if "تفسر" in t and "نسبه" in t: return "Regression (R² Interpretation)"
                         if "تؤدي" in t or "تحسين" in t: return "Causal Hypothesis"
 
-                        # 📊 الفروق
+                        # 🔀 2. الوساطة والتعديل والتفاعل
+                        if "وسيط" in t or ("من خلال" in t and "تنبؤ" not in t): return "Mediation"
+                        if "تختلف قوه" in t and "حسب" in t: return "Interaction Effect"
+                        if "يختلف تاثير" in t or "يختلف الاثر" in t or "باختلاف" in t or "حسب" in t:
+                            return "Moderation Advanced" if "حسب" in t else "Moderation"
+
+                        # 📊 3. الفروق
                         if "فروق" in t or "اختلاف" in t or "متوسطات" in t:
                             if is_null: return "Null Differences"
                             if "متوسطات" in t: return "Parametric (T-test / ANOVA)"
                             return "Differences (Parametric)"
 
-                        # 📈 الانحدار والتأثير
+                        # 📈 4. الانحدار والتأثير
                         if "اثر" in t or "تاثير" in t or "يؤثر" in t:
                             if is_null: return "Null Effect"
                             return "Regression / Effect"
 
-                        # 🔗 الارتباط
+                        # 🔗 5. الارتباط
                         if "علاقه" in t or "ارتباط" in t:
                             if is_null: return "Null Correlation"
                             if is_positive: return "Positive Correlation"
                             if is_negative: return "Negative Correlation"
                             return "Correlation"
 
-                        # 📝 الوصفي
+                        # 📝 6. الوصفي
                         if "مستوى" in t or "درجه" in t or "مرتفع" in t or "منخفض" in t:
                             return "Descriptive"
 
@@ -806,7 +807,7 @@ if uploaded_file is not None:
                         if "Correlation" in test_name: return "Pearson / Spearman Correlation"
                         if test_name in ["Regression / Effect", "Null Effect", "Predictive Regression", "Regression (R² Interpretation)", "Causal Hypothesis", "Multiple Regression"]: return "Linear / Multiple Regression"
                         if "Differences" in test_name or "Parametric" in test_name or test_name in ["Mann-Whitney", "Kruskal-Wallis"]: return "Independent T-test / ANOVA (or Non-Parametric)"
-                        if test_name in ["Mediation", "Moderation", "Moderation Advanced"]: return "PROCESS Macro / Advanced Regression"
+                        if test_name in ["Mediation", "Moderation", "Moderation Advanced", "Interaction Effect"]: return "PROCESS Macro / Interaction Analysis"
                         if test_name == "SEM (Structural Equation Modeling)": return "Structural Equation Modeling (AMOS / SmartPLS)"
                         if test_name == "Descriptive": return "Descriptive Statistics (Mean/Std)"
                         return "Manual Review"
