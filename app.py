@@ -629,7 +629,7 @@ if uploaded_file is not None:
            
 # ==========================================
             # 4. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.5 - المتغيرات المتعددة الشاملة)
-           # ==========================================
+            # ==========================================
             with tab4:
                 st.header("🧠 المحلل الذكي للفرضيات (النسخة الشامل V3.5)")
                 st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (24 نوعاً)** والذكاء الاصطناعي، مع دعم الانحدار والارتباط المتعدد:")
@@ -731,9 +731,12 @@ if uploaded_file is not None:
                                         
                             if st.session_state.get(f'is_analyzed_{i}', False):
                                 best_test_memory = st.session_state[f'semantic_test_{i}']
-                                st.success(f"✅ تم التصنيف بنجاح وفقاً لنظام 24-Type Classification")
                                 
-                                # 👇 إظهار القائمة كاملة بـ 24 نوعاً!
+                                # 👇=== التعديل هنا: إظهار اسم الفرضية بوضوح في المربع الأخضر ===👇
+                                st.success(f"✅ تم الفهم الدلالي بنجاح! نوع الفرضية هو: **{best_test_memory}**")
+                                # 👆=====================================================👆
+                                
+                                # إظهار القائمة كاملة بـ 24 نوعاً!
                                 default_idx = ALL_HYPOTHESIS_TYPES.index(best_test_memory) if best_test_memory in ALL_HYPOTHESIS_TYPES else 0
                                 col_type = st.selectbox("📌 نوع الفرضية والاختبار:", ALL_HYPOTHESIS_TYPES, index=default_idx, key=f"test_type_{i}")
                                 
@@ -752,14 +755,13 @@ if uploaded_file is not None:
                                 def_dep_idx = get_best_match_index(auto_dep_word, analysis_cols)
                                 default_dep = [analysis_cols[def_dep_idx]] if analysis_cols else []
                                 
-                                # 👇 السماح باختيار عدة متغيرات مستقلة و تابعة!
+                                # السماح باختيار عدة متغيرات مستقلة و تابعة!
                                 if is_diff: 
                                     h_indep = st.multiselect("المتغيرات المستقلة (اختر فئة ديموغرافية أو أكثر):", categorical_cols, default=default_indep, key=f"indep_{i}")
                                 else: 
                                     h_indep = st.multiselect("المتغيرات المستقلة (المؤثرات - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
                                 
                                 h_dep = st.multiselect("المتغيرات التابعة (النتائج - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_dep, key=f"dep_{i}")
-                                # 👆==========================================================👆
                                 
                                 if st.button(f"🚀 تنفيذ الاختبار، رسم المخطط، وكتابة المناقشة ({i})", key=f"exec_{i}"):
                                     if not h_indep or not h_dep:
