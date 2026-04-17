@@ -731,11 +731,11 @@ if uploaded_file is not None:
                             except: st.error("حدث خطأ في الانحدار.")
 
 # ==========================================
-            # 7. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.0 - دعم المتغيرات المتعددة)
+            # 7. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.5 - المتغيرات المتعددة الشاملة)
             # ==========================================
             with tab7:
-                st.header("🧠 المحلل الذكي للفرضيات (النسخة الفائقة V3.0)")
-                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (24 نوعاً)** والذكاء الاصطناعي التوليدي، مع دعم الانحدار المتعدد:")
+                st.header("🧠 المحلل الذكي للفرضيات (النسخة الفائقة V3.5)")
+                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (24 نوعاً)** والذكاء الاصطناعي، مع دعم الانحدار والارتباط المتعدد:")
                 
                 if not api_key:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية.")
@@ -836,82 +836,82 @@ if uploaded_file is not None:
                                 best_test_memory = st.session_state[f'semantic_test_{i}']
                                 st.success(f"✅ تم التصنيف بنجاح وفقاً لنظام 24-Type Classification")
                                 
-                                # القائمة المنسدلة تحتوي الآن على 24 نوعاً!
+                                # 👇 إظهار القائمة كاملة بـ 24 نوعاً!
                                 default_idx = ALL_HYPOTHESIS_TYPES.index(best_test_memory) if best_test_memory in ALL_HYPOTHESIS_TYPES else 0
                                 col_type = st.selectbox("📌 نوع الفرضية والاختبار:", ALL_HYPOTHESIS_TYPES, index=default_idx, key=f"test_type_{i}")
                                 
-                                # تصنيف عائلة الاختبارات برمجياً لتنفيذها لاحقاً
-                                is_corr = "Correlation" in col_type or "ارتباط" in col_type or "علاقة" in col_type
-                                is_diff = "Differences" in col_type or "Parametric" in col_type or "Mann" in col_type or "Kruskal" in col_type or "فروق" in col_type
-                                is_reg = not is_corr and not is_diff # كل ما تبقى (تأثير، تنبؤ، وساطة، الخ) يعامل معاملة الانحدار
+                                # تصنيف عائلة الاختبارات
+                                is_corr = any(kw in col_type for kw in ["Correlation", "ارتباط", "علاقة"])
+                                is_diff = any(kw in col_type for kw in ["Differences", "Parametric", "Mann", "Kruskal", "فروق", "T-test", "ANOVA"])
+                                is_reg = not is_corr and not is_diff
 
                                 auto_indep_word = st.session_state.get(f'auto_indep_{i}', "")
                                 auto_dep_word = st.session_state.get(f'auto_dep_{i}', "")
                                 
-                                # 👇=== التعديل السحري: السماح باختيار عدة متغيرات مستقلة ===👇
+                                # إعداد المتغيرات الافتراضية
+                                def_indep_idx = get_best_match_index(auto_indep_word, categorical_cols if is_diff else analysis_cols)
+                                default_indep = [categorical_cols[def_indep_idx]] if is_diff and categorical_cols else ([analysis_cols[def_indep_idx]] if not is_diff and analysis_cols else [])
+                                
+                                def_dep_idx = get_best_match_index(auto_dep_word, analysis_cols)
+                                default_dep = [analysis_cols[def_dep_idx]] if analysis_cols else []
+                                
+                                # 👇 السماح باختيار عدة متغيرات مستقلة و تابعة!
                                 if is_diff: 
-                                    def_indep_idx = get_best_match_index(auto_indep_word, categorical_cols) if categorical_cols else 0
-                                    default_indep = [categorical_cols[def_indep_idx]] if categorical_cols else []
                                     h_indep = st.multiselect("المتغيرات المستقلة (اختر فئة ديموغرافية أو أكثر):", categorical_cols, default=default_indep, key=f"indep_{i}")
                                 else: 
-                                    def_indep_idx = get_best_match_index(auto_indep_word, analysis_cols) if analysis_cols else 0
-                                    default_indep = [analysis_cols[def_indep_idx]] if analysis_cols else []
-                                    h_indep = st.multiselect("المتغيرات المستقلة (اختر محوراً أو أكثر للانحدار المتعدد/الارتباط):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
+                                    h_indep = st.multiselect("المتغيرات المستقلة (المؤثرات - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
+                                
+                                h_dep = st.multiselect("المتغيرات التابعة (النتائج - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_dep, key=f"dep_{i}")
                                 # 👆==========================================================👆
                                 
-                                def_dep_idx = get_best_match_index(auto_dep_word, analysis_cols) if analysis_cols else (len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
-                                h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=def_dep_idx, key=f"dep_{i}")
-                                
                                 if st.button(f"🚀 تنفيذ الاختبار، رسم المخطط، وكتابة المناقشة ({i})", key=f"exec_{i}"):
-                                    if not h_indep:
-                                        st.warning("⚠️ يرجى اختيار متغير مستقل واحد على الأقل.")
+                                    if not h_indep or not h_dep:
+                                        st.warning("⚠️ يرجى اختيار متغير مستقل واحد وتابع واحد على الأقل.")
                                     else:
-                                        with st.spinner("جاري العمليات المعقدة..."):
-                                            clean_df = df_encoded[h_indep + [h_dep]].dropna()
+                                        with st.spinner("جاري تنفيذ العمليات للمتغيرات المتعددة..."):
+                                            clean_df = df_encoded[h_indep + h_dep].dropna()
                                             results_str = ""
                                             try:
                                                 col1, col2 = st.columns([1, 1])
                                                 
                                                 with col1:
                                                     st.markdown("**النتائج الإحصائية:**")
-                                                    if is_corr:
-                                                        # ارتباط لمتغير واحد أو أكثر
-                                                        res_list = []
-                                                        for x_col in h_indep:
-                                                            r = pg.corr(clean_df[x_col].astype(float), clean_df[h_dep].astype(float), method='pearson')
-                                                            r.insert(0, 'المتغير المستقل', x_col)
+                                                    res_list = []
+                                                    
+                                                    # الدوران حول المتغيرات التابعة لمعالجة كل واحد على حدة
+                                                    for y_col in h_dep:
+                                                        if is_corr:
+                                                            for x_col in h_indep:
+                                                                r = pg.corr(clean_df[x_col].astype(float), clean_df[y_col].astype(float), method='pearson')
+                                                                r.insert(0, 'التابع', y_col)
+                                                                r.insert(0, 'المستقل', x_col)
+                                                                res_list.append(r)
+                                                        elif is_diff:
+                                                            for x_col in h_indep:
+                                                                grps = clean_df[x_col].unique()
+                                                                if len(grps) == 2: r = pg.ttest(clean_df[clean_df[x_col]==grps[0]][y_col].astype(float), clean_df[clean_df[x_col]==grps[1]][y_col].astype(float))
+                                                                else:
+                                                                    valid_grps = clean_df[x_col].value_counts()[clean_df[x_col].value_counts()>=2].index
+                                                                    r = pg.anova(data=clean_df[clean_df[x_col].isin(valid_grps)], dv=y_col, between=x_col)
+                                                                r.insert(0, 'التابع', y_col)
+                                                                r.insert(0, 'الديموغرافي', x_col)
+                                                                res_list.append(r)
+                                                        else: 
+                                                            # الانحدار المتعدد: كل المستقلات معاً على كل تابع
+                                                            r = pg.linear_regression(clean_df[h_indep].astype(float), clean_df[y_col].astype(float))
+                                                            r.insert(0, 'التابع', y_col)
                                                             res_list.append(r)
-                                                        final_res = pd.concat(res_list)
-                                                        results_str = final_res.to_markdown()
-                                                        st.dataframe(final_res)
-                                                        
-                                                    elif is_diff:
-                                                        # فروق لمتغير واحد أو أكثر
-                                                        res_list = []
-                                                        for x_col in h_indep:
-                                                            grps = clean_df[x_col].unique()
-                                                            if len(grps) == 2: r = pg.ttest(clean_df[clean_df[x_col]==grps[0]][h_dep].astype(float), clean_df[clean_df[x_col]==grps[1]][h_dep].astype(float))
-                                                            else:
-                                                                valid_grps = clean_df[x_col].value_counts()[clean_df[x_col].value_counts()>=2].index
-                                                                r = pg.anova(data=clean_df[clean_df[x_col].isin(valid_grps)], dv=h_dep, between=x_col)
-                                                            r.insert(0, 'المتغير الديموغرافي', x_col)
-                                                            res_list.append(r)
-                                                        final_res = pd.concat(res_list)
-                                                        results_str = final_res.to_markdown()
-                                                        st.dataframe(final_res)
-                                                        
-                                                    else: 
-                                                        # انحدار خطي أو متعدد (يدعم Multiple X natively in Pingouin)
-                                                        final_res = pg.linear_regression(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float))
-                                                        results_str = final_res.to_markdown()
-                                                        st.dataframe(final_res)
+                                                            
+                                                    final_res = pd.concat(res_list)
+                                                    results_str = final_res.to_markdown()
+                                                    st.dataframe(final_res)
                                                 
                                                 with col2:
-                                                    st.markdown(f"**المخطط البياني (يعرض أول متغير مستقل):**")
+                                                    st.markdown(f"**المخطط البياني (يعرض أول متغير مستقل مع أول تابع):**")
                                                     if is_diff:
-                                                        fig = px.box(clean_df, x=h_indep[0], y=h_dep, color=h_indep[0], height=300)
+                                                        fig = px.box(clean_df, x=h_indep[0], y=h_dep[0], color=h_indep[0], height=300)
                                                     else:
-                                                        fig = px.scatter(clean_df, x=h_indep[0], y=h_dep, trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
+                                                        fig = px.scatter(clean_df, x=h_indep[0], y=h_dep[0], trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
                                                     
                                                     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
                                                     st.plotly_chart(fig, use_container_width=True)
@@ -929,7 +929,7 @@ if uploaded_file is not None:
 **📌 الفرضية:**
 {u_hypo}
 
-**📊 القرار الإحصائي ({col_type}):**
+**📊 القرار الإحصائي:**
 {decision_text}
 
 **🧠 التحليل الأكاديمي التفصيلي:**
