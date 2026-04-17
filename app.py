@@ -279,13 +279,6 @@ st.markdown(f"""
         border: 1px solid rgba(128,128,128,0.1) !important;
     }}
 
-    /* 🌟 تنسيق خاص للأبعاد الفرعية في القائمة الجانبية (الهيكل الهرمي) 🌟 */
-    .sub-dimension-container {{
-        padding-right: 15px !important;
-        border-right: 2px solid #d4af37 !important;
-        margin-bottom: 10px !important;
-    }}
-
     </style>
 
     <div class="hero-container">
@@ -417,68 +410,35 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        st.sidebar.title("⚙️ بناء الهيكل التنظيمي (Constructs & Dimensions)")
+        st.sidebar.title("⚙️ بناء المحاور (Dimensions)")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # 🌟 التعديل السحري: بناء القائمة الهرمية 🌟
-        num_main_constructs = st.sidebar.number_input("🔢 عدد المتغيرات الرئيسية (مثال: مستقل، تابع، وسيط):", min_value=1, max_value=10, value=2)
+        num_dims = st.sidebar.number_input("🔢 كم عدد المحاور/الأبعاد في دراستك؟", min_value=1, max_value=15, value=6)
         
-        dimensions_dict = {} # لتخزين الأبعاد الفرعية (الأصلي)
-        analysis_cols = []   # لتخزين جميع المتغيرات (الرئيسية والفرعية) للتحليل
+        dimensions_dict = {}
+        analysis_cols = []
         active_questions = []
-        constructs_dict = {} # قاموس جديد لتخزين الهيكل الهرمي
         
-        available_questions = all_questions.copy() # نسخة للتحكم بالأسئلة المتبقية
-
-        for i in range(int(num_main_constructs)):
+        chunk_size = max(1, len(all_questions) // int(num_dims)) if all_questions else 1
+        
+        for i in range(int(num_dims)):
             st.sidebar.markdown(f"---")
-            construct_name = st.sidebar.text_input(f"اسم المتغير الرئيسي {i+1}:", f"المتغير {i+1}", key=f"construct_name_{i}")
-            num_sub_dims = st.sidebar.number_input(f"🔢 كم عدد أبعاد ({construct_name})؟", min_value=1, max_value=10, value=1, key=f"num_dims_{i}")
+            dim_name = st.sidebar.text_input(f"اسم المحور {i+1}:", f"المحور {i+1}", key=f"name_{i}")
+            start_idx = i * chunk_size
+            end_idx = start_idx + chunk_size if i < int(num_dims) - 1 else len(all_questions)
+            default_cols = all_questions[start_idx:end_idx] if all_questions else []
+            dim_cols = st.sidebar.multiselect(f"أسئلة {dim_name}:", all_questions, default=default_cols, key=f"cols_{i}")
             
-            construct_cols = [] # جميع أسئلة هذا المتغير الرئيسي
-            
-            # قسم الأبعاد الفرعية
-            st.sidebar.markdown(f'<div class="sub-dimension-container">', unsafe_allow_html=True)
-            for j in range(int(num_sub_dims)):
-                dim_name = st.sidebar.text_input(f"اسم البعد {j+1} التابع لـ ({construct_name}):", f"البعد {j+1}", key=f"dim_name_{i}_{j}")
+            if dim_cols:
+                dimensions_dict[dim_name] = dim_cols
+                df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
+                df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
+                analysis_cols.append(dim_name)
+                active_questions.extend(dim_cols)
                 
-                # توزيع ذكي للأسئلة المتبقية كقيم افتراضية
-                chunk_size = max(1, len(available_questions) // max(1, int(num_sub_dims) - j)) if available_questions else 1
-                default_cols = available_questions[:chunk_size] if available_questions else []
-                
-                dim_cols = st.sidebar.multiselect(f"أسئلة ({dim_name}):", all_questions, default=default_cols, key=f"dim_cols_{i}_{j}")
-                
-                if dim_cols:
-                    dimensions_dict[dim_name] = dim_cols
-                    construct_cols.extend(dim_cols)
-                    
-                    # حساب متوسط البعد
-                    df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
-                    df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
-                    analysis_cols.append(dim_name)
-                    active_questions.extend(dim_cols)
-                    
-                    # إزالة الأسئلة المختارة من القائمة المتاحة
-                    available_questions = [q for q in available_questions if q not in dim_cols]
-            st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-            # إذا كان هناك أبعاد تم تحديدها، قم بإنشاء وحساب المتغير الرئيسي
-            if construct_cols:
-                # إزالة التكرارات من قائمة أسئلة المتغير الرئيسي
-                construct_cols = list(dict.fromkeys(construct_cols))
-                constructs_dict[construct_name] = construct_cols
-                
-                # حساب متوسط المتغير الرئيسي بناءً على جميع أسئلة أبعاده الفرعية
-                df_encoded[construct_name] = df_encoded[construct_cols].mean(axis=1)
-                
-                # إضافة المتغير الرئيسي كخيار للتحليل!
-                analysis_cols.append(construct_name)
-                # إضافة المتغير الرئيسي أيضاً كـ "بعد" وهمي لكي يظهر في نتائج الثبات (Cronbach's Alpha)
-                dimensions_dict[construct_name] = construct_cols 
-
         active_questions = list(dict.fromkeys(active_questions))
 
         if len(active_questions) > 0:
@@ -486,9 +446,8 @@ if uploaded_file is not None:
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
 
         if not analysis_cols:
-            st.warning("يرجى تحديد أسئلة الأبعاد من القائمة الجانبية للبدء.")
+            st.warning("يرجى تحديد أسئلة المحاور من القائمة الجانبية للبدء.")
         else:
-        
             # التبويبات الثمانية
            # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
            # تعريف 6 تبويبات احترافية (بعد إزالة التبويبات اليدوية القديمة)
