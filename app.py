@@ -410,7 +410,7 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        st.sidebar.title("⚙️ بناء هيكل الدراسة (البحث الحالي)")
+        st.sidebar.title("⚙️ البناء الهيكلي للدراسة")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
