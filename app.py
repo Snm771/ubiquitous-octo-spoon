@@ -416,8 +416,8 @@ if uploaded_file is not None:
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # 🌟 الهيكل الثابت والمخصص لدراستك (كما طلبت الأخت) 🌟
-        research_model = {
+        # 🌟 الهيكل الأساسي (جاهز للتخصيص من قبل الباحث) 🌟
+        base_model = {
             "المتغير المستقل": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"],
             "المتغير التابع": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"],
             "المتغير الوسيط (المتكامل)": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"]
@@ -429,24 +429,30 @@ if uploaded_file is not None:
         constructs_dict = {}
         
         available_questions = all_questions.copy()
-        total_dims = sum(len(dims) for dims in research_model.values()) # إجمالي الأبعاد (18 بعد)
+        total_dims = 18 # إجمالي الأبعاد الافتراضية
 
-        # بناء القائمة الجانبية بناءً على الهيكل الثابت
-        for construct_name, sub_dims in research_model.items():
-            st.sidebar.markdown(f"### 📌 {construct_name}")
+        # بناء القائمة الجانبية بخانات نصية لتخصيص الأسماء
+        for idx_c, (default_construct, default_dims) in enumerate(base_model.items()):
+            st.sidebar.markdown(f"---")
+            # 👇 خانة لتعديل اسم المتغير الرئيسي
+            custom_construct_name = st.sidebar.text_input(f"📌 اسم {default_construct}:", value=default_construct, key=f"c_name_{idx_c}")
+            
             construct_cols = []
             
             st.sidebar.markdown(f'<div class="sub-dimension-container">', unsafe_allow_html=True)
-            for dim_name in sub_dims:
+            for idx_d, default_dim in enumerate(default_dims):
+                # 👇 خانة لتعديل اسم البعد الفرعي
+                custom_dim_name = st.sidebar.text_input(f"اسم {default_dim} (لـ {custom_construct_name}):", value=default_dim, key=f"d_name_{idx_c}_{idx_d}")
+                
                 # التوزيع التلقائي الذكي للأسئلة
                 chunk_size = max(1, len(available_questions) // total_dims) if available_questions and total_dims > 0 else 0
                 default_cols = available_questions[:chunk_size] if available_questions else []
                 
-                # إنشاء اسم فريد برمجياً لمنع التداخل (مثل: المتغير المستقل - البعد الأول)
-                unique_dim_label = f"{construct_name} - {dim_name}"
+                # إنشاء اسم فريد برمجياً لمنع التداخل (بناءً على الأسماء المخصصة)
+                unique_dim_label = f"{custom_construct_name} - {custom_dim_name}"
                 
-                # عرض اسم البعد بشكل أنيق للمستخدم
-                dim_cols = st.sidebar.multiselect(f"أسئلة ({dim_name}):", all_questions, default=default_cols, key=f"key_{unique_dim_label}")
+                # عرض قائمة الأسئلة للبعد
+                dim_cols = st.sidebar.multiselect(f"أسئلة ({custom_dim_name}):", all_questions, default=default_cols, key=f"key_{unique_dim_label}")
                 
                 if dim_cols:
                     dimensions_dict[unique_dim_label] = dim_cols
@@ -462,15 +468,15 @@ if uploaded_file is not None:
             st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
             if construct_cols:
-                # حفظ وحساب المتغير الرئيسي ككل
+                # حفظ وحساب المتغير الرئيسي بالاسم المخصص الذي أدخله الباحث
                 construct_cols = list(dict.fromkeys(construct_cols))
-                constructs_dict[construct_name] = construct_cols
-                df_encoded[construct_name] = df_encoded[construct_cols].mean(axis=1)
+                constructs_dict[custom_construct_name] = construct_cols
+                df_encoded[custom_construct_name] = df_encoded[construct_cols].mean(axis=1)
                 
-                # إضافة المتغير الرئيسي كخيار جاهز للتحليل والفروق!
-                analysis_cols.append(construct_name)
-                # إضافة المتغير الرئيسي لاختبارات الثبات
-                dimensions_dict[construct_name] = construct_cols 
+                # إضافة المتغير المخصص كخيار للتحليل
+                analysis_cols.append(custom_construct_name)
+                # إضافة المتغير المخصص لاختبارات الثبات
+                dimensions_dict[custom_construct_name] = construct_cols 
 
         active_questions = list(dict.fromkeys(active_questions))
 
