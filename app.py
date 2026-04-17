@@ -731,11 +731,11 @@ if uploaded_file is not None:
                             except: st.error("حدث خطأ في الانحدار.")
 
 # ==========================================
-            # 7. التبويب السابع: المحلل الذكي الهجين (Local Engine + LLM)
+            # 7. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.0 - دعم المتغيرات المتعددة)
             # ==========================================
             with tab7:
-                st.header("🧠 المحلل الذكي للفرضيات (النسخة الفائقة V2.0)")
-                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (لتحليل 24 نوعاً من الفرضيات بدقة 100%)** والذكاء الاصطناعي التوليدي:")
+                st.header("🧠 المحلل الذكي للفرضيات (النسخة الفائقة V3.0)")
+                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (24 نوعاً)** والذكاء الاصطناعي التوليدي، مع دعم الانحدار المتعدد:")
                 
                 if not api_key:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية.")
@@ -743,7 +743,19 @@ if uploaded_file is not None:
                     import difflib
                     import re
 
-                    # 🧠 1. محرك الفهم الدلالي الفائق (تصنيف 24 نوعاً من الفرضيات)
+                    # قائمة الـ 24 نوعاً المعجمية لتظهر في القائمة المنسدلة
+                    ALL_HYPOTHESIS_TYPES = [
+                        "Correlation (علاقة)", "Null Correlation (لا توجد علاقة)", "Positive Correlation (علاقة طردية)", "Negative Correlation (علاقة عكسية)",
+                        "Pearson Correlation (ارتباط بيرسون)", "Spearman Correlation (ارتباط سبيرمان)",
+                        "Regression / Effect (تأثير وانحدار)", "Null Effect (لا يوجد تأثير)", "Predictive Regression (تنبؤ)", "Regression (R² Interpretation) (نسبة تفسير)",
+                        "Causal Hypothesis (سببية)", "Multiple Regression (انحدار متعدد)",
+                        "Differences (Parametric) (فروق معلمية)", "Null Differences (لا توجد فروق)", "Parametric (T-test / ANOVA) (متوسطات)",
+                        "Mann-Whitney (مان ويتني)", "Kruskal-Wallis (كروسكال واليس)",
+                        "Mediation (وساطة)", "Moderation (تعديل)", "Moderation Advanced (تعديل متقدم)", "Interaction Effect (تأثير تفاعلي)",
+                        "SEM (Structural Equation Modeling) (نمذجة بنائية)", "Descriptive (وصفي)", "Exploratory / Unclassified (استكشافي)"
+                    ]
+
+                    # 🧠 1. محرك الفهم الدلالي الفائق
                     def normalize(text):
                         text = str(text).replace('أ', 'ا').replace('إ', 'ا').replace('ة', 'ه')
                         return re.sub(r'[^\w\s]', '', text.lower())
@@ -751,100 +763,64 @@ if uploaded_file is not None:
                     def ultimate_classifier(text):
                         t = normalize(text)
                         
-                        # 🛑 التحقق من النفي
                         is_null = "لا توجد" in t or "لا يوجد" in t or "ليس هناك" in t
-                        
-                        # 🧭 التحقق من الاتجاه
                         is_positive = "طرديه" in t or "ايجابيه" in t
                         is_negative = "عكسيه" in t or "سلبيه" in t
 
-                        # 🔬 اختبارات محددة وغير معلمية
-                        if "سبيرمان" in t: return "Spearman Correlation"
-                        if "مان ويتني" in t or "مانويتني" in t: return "Mann-Whitney"
-                        if "كروسكال" in t: return "Kruskal-Wallis"
-                        if "بيرسون" in t: return "Pearson Correlation"
+                        if "سبيرمان" in t: return "Spearman Correlation (ارتباط سبيرمان)"
+                        if "مان ويتني" in t or "مانويتني" in t: return "Mann-Whitney (مان ويتني)"
+                        if "كروسكال" in t: return "Kruskal-Wallis (كروسكال واليس)"
+                        if "بيرسون" in t: return "Pearson Correlation (ارتباط بيرسون)"
 
-                        # 🧠 فرضيات متقدمة
-                        if "مباشر وغير مباشر" in t: return "SEM (Structural Equation Modeling)"
-                        if "مجتمعه" in t or "ابعاد" in t: return "Multiple Regression"
+                        if "مباشر وغير مباشر" in t: return "SEM (Structural Equation Modeling) (نمذجة بنائية)"
+                        if "مجتمعه" in t or "ابعاد" in t: return "Multiple Regression (انحدار متعدد)"
 
-                        # 🔮 1. التنبؤ والسببية (لها الأولوية القصوى)
-                        if "تنبؤ" in t or "يتنبا" in t: return "Predictive Regression"
-                        if "تفسر" in t and "نسبه" in t: return "Regression (R² Interpretation)"
-                        if "تؤدي" in t or "تحسين" in t: return "Causal Hypothesis"
+                        if "تنبؤ" in t or "يتنبا" in t: return "Predictive Regression (تنبؤ)"
+                        if "تفسر" in t and "نسبه" in t: return "Regression (R² Interpretation) (نسبة تفسير)"
+                        if "تؤدي" in t or "تحسين" in t: return "Causal Hypothesis (سببية)"
 
-                        # 🔀 2. الوساطة والتعديل والتفاعل
-                        if "وسيط" in t or ("من خلال" in t and "تنبؤ" not in t): return "Mediation"
-                        if "تختلف قوه" in t and "حسب" in t: return "Interaction Effect"
+                        if "وسيط" in t or ("من خلال" in t and "تنبؤ" not in t): return "Mediation (وساطة)"
+                        if "تختلف قوه" in t and "حسب" in t: return "Interaction Effect (تأثير تفاعلي)"
                         if "يختلف تاثير" in t or "يختلف الاثر" in t or "باختلاف" in t or "حسب" in t:
-                            return "Moderation Advanced" if "حسب" in t else "Moderation"
+                            return "Moderation Advanced (تعديل متقدم)" if "حسب" in t else "Moderation (تعديل)"
 
-                        # 📊 3. الفروق
                         if "فروق" in t or "اختلاف" in t or "متوسطات" in t:
-                            if is_null: return "Null Differences"
-                            if "متوسطات" in t: return "Parametric (T-test / ANOVA)"
-                            return "Differences (Parametric)"
+                            if is_null: return "Null Differences (لا توجد فروق)"
+                            if "متوسطات" in t: return "Parametric (T-test / ANOVA) (متوسطات)"
+                            return "Differences (Parametric) (فروق معلمية)"
 
-                        # 📈 4. الانحدار والتأثير
                         if "اثر" in t or "تاثير" in t or "يؤثر" in t:
-                            if is_null: return "Null Effect"
-                            return "Regression / Effect"
+                            if is_null: return "Null Effect (لا يوجد تأثير)"
+                            return "Regression / Effect (تأثير وانحدار)"
 
-                        # 🔗 5. الارتباط
                         if "علاقه" in t or "ارتباط" in t:
-                            if is_null: return "Null Correlation"
-                            if is_positive: return "Positive Correlation"
-                            if is_negative: return "Negative Correlation"
-                            return "Correlation"
+                            if is_null: return "Null Correlation (لا توجد علاقة)"
+                            if is_positive: return "Positive Correlation (علاقة طردية)"
+                            if is_negative: return "Negative Correlation (علاقة عكسية)"
+                            return "Correlation (علاقة)"
 
-                        # 📝 6. الوصفي
                         if "مستوى" in t or "درجه" in t or "مرتفع" in t or "منخفض" in t:
-                            return "Descriptive"
+                            return "Descriptive (وصفي)"
 
-                        return "Exploratory / Unclassified"
-
-                    def choose_spss_test(test_name):
-                        if "Correlation" in test_name: return "Pearson / Spearman Correlation"
-                        if test_name in ["Regression / Effect", "Null Effect", "Predictive Regression", "Regression (R² Interpretation)", "Causal Hypothesis", "Multiple Regression"]: return "Linear / Multiple Regression"
-                        if "Differences" in test_name or "Parametric" in test_name or test_name in ["Mann-Whitney", "Kruskal-Wallis"]: return "Independent T-test / ANOVA (or Non-Parametric)"
-                        if test_name in ["Mediation", "Moderation", "Moderation Advanced", "Interaction Effect"]: return "PROCESS Macro / Interaction Analysis"
-                        if test_name == "SEM (Structural Equation Modeling)": return "Structural Equation Modeling (AMOS / SmartPLS)"
-                        if test_name == "Descriptive": return "Descriptive Statistics (Mean/Std)"
-                        return "Manual Review"
+                        return "Exploratory / Unclassified (استكشافي)"
 
                     def get_best_match_index(target_word, options_list):
                         if not target_word: return 0
                         matches = difflib.get_close_matches(target_word, options_list, n=1, cutoff=0.2)
                         return options_list.index(matches[0]) if matches else 0
 
-                    # تكرار 7 مرات لإنشاء 7 مساحات للفرضيات
                     for i in range(1, 8):
                         with st.expander(f"📌 الفرضية رقم ({i})"):
                             u_hypo = st.text_area("✍️ أدخل نص الفرضية هنا:", key=f"hypo_text_{i}")
                             
                             if st.button(f"🔍 تحليل الفرضية آلياً ({i})", key=f"ai_btn_{i}"):
-                                with st.spinner("جاري دمج الفهم الدلالي الفائق مع الذكاء الاصطناعي..."):
+                                with st.spinner("جاري دمج الفهم الدلالي مع الذكاء الاصطناعي..."):
                                     try:
-                                        # 1. الاستخراج عبر الذكاء الاصطناعي (للمتغيرات فقط)
                                         res_ai = analyze_hypothesis_text(u_hypo, api_key)
-                                        
-                                        # 2. التصنيف عبر محرك الـ 24 نوعاً (دقة 100%)
                                         best_test = ultimate_classifier(u_hypo)
-                                        spss_test = choose_spss_test(best_test)
                                         
-                                        # حفظ نتائج المحرك الدلالي
                                         st.session_state[f'semantic_test_{i}'] = best_test
-                                        st.session_state[f'spss_test_{i}'] = spss_test
                                         
-                                        # توجيه التطبيق لاختيار العملية البرمجية الصحيحة
-                                        if "Regression" in spss_test or "PROCESS" in spss_test or "SEM" in spss_test: 
-                                            st.session_state[f'test_idx_{i}'] = 1
-                                        elif "Differences" in best_test or "Parametric" in best_test or "T-test" in spss_test: 
-                                            st.session_state[f'test_idx_{i}'] = 2
-                                        else: 
-                                            st.session_state[f'test_idx_{i}'] = 0
-                                            
-                                        # استخراج المتغيرات للربط التلقائي بالقوائم
                                         st.session_state[f'auto_indep_{i}'] = ""
                                         st.session_state[f'auto_dep_{i}'] = ""
                                         for line in res_ai.split('\n'):
@@ -857,97 +833,123 @@ if uploaded_file is not None:
                                         st.error(f"خطأ في التحليل: {e}")
                                         
                             if st.session_state.get(f'is_analyzed_{i}', False):
-                                st.success(f"✅ تم الفهم الدلالي بنجاح! نوع الفرضية: **{st.session_state[f'semantic_test_{i}']}**")
-                                st.info(f"**🧠 الاختبار الإحصائي الأكاديمي المقترح (SPSS Logic):** {st.session_state[f'spss_test_{i}']}")
-                                st.markdown("---")
+                                best_test_memory = st.session_state[f'semantic_test_{i}']
+                                st.success(f"✅ تم التصنيف بنجاح وفقاً لنظام 24-Type Classification")
                                 
-                                default_test = st.session_state.get(f'test_idx_{i}', 0)
+                                # القائمة المنسدلة تحتوي الآن على 24 نوعاً!
+                                default_idx = ALL_HYPOTHESIS_TYPES.index(best_test_memory) if best_test_memory in ALL_HYPOTHESIS_TYPES else 0
+                                col_type = st.selectbox("📌 نوع الفرضية والاختبار:", ALL_HYPOTHESIS_TYPES, index=default_idx, key=f"test_type_{i}")
+                                
+                                # تصنيف عائلة الاختبارات برمجياً لتنفيذها لاحقاً
+                                is_corr = "Correlation" in col_type or "ارتباط" in col_type or "علاقة" in col_type
+                                is_diff = "Differences" in col_type or "Parametric" in col_type or "Mann" in col_type or "Kruskal" in col_type or "فروق" in col_type
+                                is_reg = not is_corr and not is_diff # كل ما تبقى (تأثير، تنبؤ، وساطة، الخ) يعامل معاملة الانحدار
+
                                 auto_indep_word = st.session_state.get(f'auto_indep_{i}', "")
                                 auto_dep_word = st.session_state.get(f'auto_dep_{i}', "")
                                 
-                                col_type = st.selectbox("التطبيق البرمجي (المتاح آلياً):", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"], index=default_test, key=f"test_type_{i}")
-                                
-                                # المطابقة الذكية لاختيار المتغيرات الصحيحة من القائمة تلقائياً
-                                if "فروق" in col_type: 
+                                # 👇=== التعديل السحري: السماح باختيار عدة متغيرات مستقلة ===👇
+                                if is_diff: 
                                     def_indep_idx = get_best_match_index(auto_indep_word, categorical_cols) if categorical_cols else 0
-                                    h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols, index=def_indep_idx, key=f"indep_{i}")
+                                    default_indep = [categorical_cols[def_indep_idx]] if categorical_cols else []
+                                    h_indep = st.multiselect("المتغيرات المستقلة (اختر فئة ديموغرافية أو أكثر):", categorical_cols, default=default_indep, key=f"indep_{i}")
                                 else: 
                                     def_indep_idx = get_best_match_index(auto_indep_word, analysis_cols) if analysis_cols else 0
-                                    h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols, index=def_indep_idx, key=f"indep_ax_{i}")
+                                    default_indep = [analysis_cols[def_indep_idx]] if analysis_cols else []
+                                    h_indep = st.multiselect("المتغيرات المستقلة (اختر محوراً أو أكثر للانحدار المتعدد/الارتباط):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
+                                # 👆==========================================================👆
                                 
                                 def_dep_idx = get_best_match_index(auto_dep_word, analysis_cols) if analysis_cols else (len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
                                 h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=def_dep_idx, key=f"dep_{i}")
                                 
                                 if st.button(f"🚀 تنفيذ الاختبار، رسم المخطط، وكتابة المناقشة ({i})", key=f"exec_{i}"):
-                                    with st.spinner("جاري العمليات المعقدة..."):
-                                        clean_df = df_encoded[[h_indep, h_dep]].dropna()
-                                        results_str = ""
-                                        try:
-                                            col1, col2 = st.columns([1, 1])
-                                            
-                                            with col1:
-                                                st.markdown("**النتائج الإحصائية:**")
-                                                if "علاقة" in col_type:
-                                                    res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
-                                                    results_str = res.to_markdown()
-                                                    st.dataframe(res)
-                                                elif "تأثير" in col_type:
-                                                    res = pg.linear_regression(clean_df[[h_indep]].astype(float), clean_df[h_dep].astype(float))
-                                                    results_str = res.to_markdown()
-                                                    st.dataframe(res)
-                                                elif "فروق" in col_type:
-                                                    grps = clean_df[h_indep].unique()
-                                                    if len(grps) == 2: res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
-                                                    else:
-                                                        valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
-                                                        res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
-                                                    results_str = res.to_markdown()
-                                                    st.dataframe(res)
-                                            
-                                            with col2:
-                                                st.markdown("**المخطط البياني التلقائي:**")
-                                                if "فروق" in col_type:
-                                                    fig = px.box(clean_df, x=h_indep, y=h_dep, color=h_indep, height=300)
-                                                else:
-                                                    fig = px.scatter(clean_df, x=h_indep, y=h_dep, trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
+                                    if not h_indep:
+                                        st.warning("⚠️ يرجى اختيار متغير مستقل واحد على الأقل.")
+                                    else:
+                                        with st.spinner("جاري العمليات المعقدة..."):
+                                            clean_df = df_encoded[h_indep + [h_dep]].dropna()
+                                            results_str = ""
+                                            try:
+                                                col1, col2 = st.columns([1, 1])
                                                 
-                                                fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                                                st.plotly_chart(fig, use_container_width=True)
+                                                with col1:
+                                                    st.markdown("**النتائج الإحصائية:**")
+                                                    if is_corr:
+                                                        # ارتباط لمتغير واحد أو أكثر
+                                                        res_list = []
+                                                        for x_col in h_indep:
+                                                            r = pg.corr(clean_df[x_col].astype(float), clean_df[h_dep].astype(float), method='pearson')
+                                                            r.insert(0, 'المتغير المستقل', x_col)
+                                                            res_list.append(r)
+                                                        final_res = pd.concat(res_list)
+                                                        results_str = final_res.to_markdown()
+                                                        st.dataframe(final_res)
+                                                        
+                                                    elif is_diff:
+                                                        # فروق لمتغير واحد أو أكثر
+                                                        res_list = []
+                                                        for x_col in h_indep:
+                                                            grps = clean_df[x_col].unique()
+                                                            if len(grps) == 2: r = pg.ttest(clean_df[clean_df[x_col]==grps[0]][h_dep].astype(float), clean_df[clean_df[x_col]==grps[1]][h_dep].astype(float))
+                                                            else:
+                                                                valid_grps = clean_df[x_col].value_counts()[clean_df[x_col].value_counts()>=2].index
+                                                                r = pg.anova(data=clean_df[clean_df[x_col].isin(valid_grps)], dv=h_dep, between=x_col)
+                                                            r.insert(0, 'المتغير الديموغرافي', x_col)
+                                                            res_list.append(r)
+                                                        final_res = pd.concat(res_list)
+                                                        results_str = final_res.to_markdown()
+                                                        st.dataframe(final_res)
+                                                        
+                                                    else: 
+                                                        # انحدار خطي أو متعدد (يدعم Multiple X natively in Pingouin)
+                                                        final_res = pg.linear_regression(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float))
+                                                        results_str = final_res.to_markdown()
+                                                        st.dataframe(final_res)
+                                                
+                                                with col2:
+                                                    st.markdown(f"**المخطط البياني (يعرض أول متغير مستقل):**")
+                                                    if is_diff:
+                                                        fig = px.box(clean_df, x=h_indep[0], y=h_dep, color=h_indep[0], height=300)
+                                                    else:
+                                                        fig = px.scatter(clean_df, x=h_indep[0], y=h_dep, trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
+                                                    
+                                                    fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                                                    st.plotly_chart(fig, use_container_width=True)
 
-                                            # دمج تفسير الأخت المهيكل مع الذكاء الاصطناعي
-                                            decision_val = "accepted" if ("True" in str(res) or "reject H0" in str(res).lower() or (('p-val' in res.columns and res['p-val'].values[0] < 0.05) or ('p-unc' in res.columns and res['p-unc'].values[0] < 0.05))) else "rejected"
-                                            decision_text = "تم قبول الفرضية (دالة إحصائياً) ✅" if decision_val == "accepted" else "تم رفض الفرضية (غير دالة إحصائياً) ❌"
-                                            
-                                            ai_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
-                                            
-                                            # قالب التفسير الأكاديمي المدمج 
-                                            st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
-                                            st.success(f"""
+                                                # دمج القرار الإحصائي
+                                                p_cols = [c for c in final_res.columns if 'p-val' in c.lower() or 'p-unc' in c.lower()]
+                                                is_sig = (final_res[p_cols[0]] < 0.05).any() if p_cols else False
+                                                decision_val = "accepted" if is_sig else "rejected"
+                                                decision_text = "تم قبول الفرضية (دالة إحصائياً) ✅" if decision_val == "accepted" else "تم رفض الفرضية (غير دالة إحصائياً) ❌"
+                                                
+                                                ai_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
+                                                
+                                                st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
+                                                st.success(f"""
 **📌 الفرضية:**
 {u_hypo}
 
-**📊 القرار الإحصائي ({st.session_state[f'spss_test_{i}']}):**
+**📊 القرار الإحصائي ({col_type}):**
 {decision_text}
 
 **🧠 التحليل الأكاديمي التفصيلي:**
 {ai_explanation}
-                                            """)
-                                            
-                                            # حفظ الفرضية في تبويب النتائج
-                                            found = False
-                                            for item in st.session_state['hypothesis_history']:
-                                                if item.get('id') == i:
-                                                    item['text'] = u_hypo
-                                                    item['result'] = decision_val
-                                                    found = True
-                                                    break
-                                            if not found:
-                                                st.session_state['hypothesis_history'].append({'id': i, 'text': u_hypo, 'result': decision_val})
+                                                """)
                                                 
-                                            st.info("✅ تم حفظ النتيجة والمخطط لتظهر في التقرير النهائي.")
-                                            
-                                        except Exception as e:
-                                            st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
+                                                found = False
+                                                for item in st.session_state['hypothesis_history']:
+                                                    if item.get('id') == i:
+                                                        item['text'] = u_hypo
+                                                        item['result'] = decision_val
+                                                        found = True
+                                                        break
+                                                if not found:
+                                                    st.session_state['hypothesis_history'].append({'id': i, 'text': u_hypo, 'result': decision_val})
+                                                    
+                                                st.info("✅ تم حفظ النتيجة والمخطط لتظهر في التقرير النهائي.")
+                                                
+                                            except Exception as e:
+                                                st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
           # ==========================================
             # 8. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
             # ==========================================
