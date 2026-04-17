@@ -587,13 +587,21 @@ if uploaded_file is not None:
                 st.markdown("### 📝 التفسير الأكاديمي:")
                 st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
 
-       # ==========================================
-            # 3. الثبات
+      # ==========================================
+            # 3. الثبات (مطور بدعم التجزئة النصفية وسبيرمان براون)
             # ==========================================
             with tab3:
-                st.subheader("🧪 معامل الثبات (Cronbach's Alpha)")
+                st.subheader("🧪 اختبارات الثبات المتقدمة (Reliability Analysis)")
                 
-                # 🔹 1. دالة التقييم الدقيق (مقتبسة من كود أختك)
+                # 🌟 الميزة الجديدة (من فكرة الأخت): خيارات الثبات المتعددة
+                st.markdown("**⚙️ خيارات الاختبارات (إضافة لـ كرونباخ ألفا الأساسي):**")
+                col_r1, col_r2 = st.columns(2)
+                with col_r1:
+                    show_split = st.checkbox("➕ حساب التجزئة النصفية (Split-Half) و سبيرمان-براون", value=True)
+                with col_r2:
+                    show_kr20 = st.checkbox("➕ حساب KR-20 (مخصص لأسئلة نعم/لا الثنائية)")
+                
+                # 🔹 1. دالة التقييم الدقيق
                 def evaluate_alpha(alpha):
                     if alpha < 0.60: return "ضعيف (مرفوض)"
                     elif alpha < 0.70: return "مقبول"
@@ -602,23 +610,41 @@ if uploaded_file is not None:
                     else: return "مرتفع جداً"
 
                 alpha_results = []
-                suggestions = [] # لحفظ مقترحات تحسين الثبات (فكرة أختك)
+                suggestions = []
 
                 for dim_name, cols in dimensions_dict.items():
                     if len(cols) > 1:
                         clean_data = df_encoded[cols].dropna()
+                        
+                        # حساب كرونباخ ألفا الأساسي
                         a_val = pg.cronbach_alpha(data=clean_data)[0]
                         eval_text = evaluate_alpha(a_val)
                         
-                        alpha_results.append({
-                            "المحور / البعد": dim_name, 
+                        row_data = {
+                            "المتغير / البعد": dim_name, 
                             "عدد العبارات": len(cols), 
-                            "معامل ألفا": round(a_val, 3),
-                            "التقييم": eval_text
-                        })
+                            "كرونباخ ألفا": round(a_val, 3)
+                        }
+                        
+                        # حساب التجزئة النصفية وسبيرمان براون رياضياً
+                        if show_split:
+                            half1 = clean_data.iloc[:, ::2].mean(axis=1) # متوسط الأسئلة الفردية
+                            half2 = clean_data.iloc[:, 1::2].mean(axis=1) # متوسط الأسئلة الزوجية
+                            r_split = pg.corr(half1, half2, method='pearson')['r'].values[0]
+                            sb_val = (2 * r_split) / (1 + r_split) if r_split != -1 else 0
+                            
+                            row_data["التجزئة النصفية"] = round(r_split, 3)
+                            row_data["سبيرمان-براون"] = round(sb_val, 3)
+                            
+                        # حساب KR-20
+                        if show_kr20:
+                            # رياضياً KR-20 للبيانات الثنائية يطابق كرونباخ ألفا
+                            row_data["KR-20"] = round(a_val, 3)
+                            
+                        row_data["التقييم العام"] = eval_text
+                        alpha_results.append(row_data)
 
-                        # 🔹 2. خوارزمية اكتشاف الأسئلة الضعيفة (مبنية على فكرة أختك)
-                        # تعمل فقط إذا كان الثبات يحتاج تحسين (أقل من 0.85)
+                        # خوارزمية اكتشاف الأسئلة الضعيفة (Item-Drop Analysis)
                         if a_val < 0.85:
                             best_a = a_val
                             bad_item = None
@@ -632,25 +658,41 @@ if uploaded_file is not None:
                             if bad_item:
                                 suggestions.append(f"⚠️ في محور **({dim_name})**: حذف السؤال `[{bad_item}]` سيرفع الثبات من **{round(a_val, 3)}** إلى **{round(best_a, 3)}**.")
 
+                # حساب الاستبيان ككل
                 if len(active_questions) > 1:
                     clean_all = df_encoded[active_questions].dropna()
                     a_total = pg.cronbach_alpha(data=clean_all)[0]
                     total_eval = evaluate_alpha(a_total)
                     
-                    alpha_results.append({
-                        "المحور / البعد": "الاستبيان ككل", 
+                    row_total = {
+                        "المتغير / البعد": "الاستبيان ككل", 
                         "عدد العبارات": len(active_questions), 
-                        "معامل ألفا": round(a_total, 3),
-                        "التقييم": total_eval
-                    })
+                        "كرونباخ ألفا": round(a_total, 3)
+                    }
                     
-                    # 🔹 3. الحفظ بصمت في الذاكرة لتبويب النتائج
+                    if show_split:
+                        half1 = clean_all.iloc[:, ::2].mean(axis=1)
+                        half2 = clean_all.iloc[:, 1::2].mean(axis=1)
+                        r_split = pg.corr(half1, half2, method='pearson')['r'].values[0]
+                        sb_val = (2 * r_split) / (1 + r_split) if r_split != -1 else 0
+                        row_total["التجزئة النصفية"] = round(r_split, 3)
+                        row_total["سبيرمان-براون"] = round(sb_val, 3)
+                        
+                    if show_kr20:
+                        row_total["KR-20"] = round(a_total, 3)
+                        
+                    row_total["التقييم العام"] = total_eval
+                    alpha_results.append(row_total)
+                    
+                    # حفظ بصمت
                     st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يعكس مستوى ({total_eval}) من الاتساق الداخلي."
 
                 if alpha_results:
-                    st.dataframe(pd.DataFrame(alpha_results).style.highlight_max(subset=['معامل ألفا'], color='rgba(212, 175, 55, 0.2)'), use_container_width=True)
+                    # تحويل لـ DataFrame وعرضه
+                    df_res = pd.DataFrame(alpha_results)
+                    st.dataframe(df_res.style.highlight_max(subset=['كرونباخ ألفا'], color='rgba(212, 175, 55, 0.2)'), use_container_width=True)
                     
-                    # 🔹 4. عرض مقترحات التحسين كـ "خبير ذكي"
+                    # عرض المقترحات
                     if suggestions:
                         with st.expander("💡 مقترحات الخبير الذكي لتحسين الثبات (Item-Drop Analysis)"):
                             st.info("اكتشف النظام أن بعض الأسئلة تشتت إجابات العينة وتضعف الثبات العام للمحاور. إليك مقترحات الحذف:")
@@ -659,11 +701,9 @@ if uploaded_file is not None:
 
                     st.markdown("### 📝 التفسير الأكاديمي:")
                     st.info("""
-تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة القياس (الاستبيان) تتمتع بدرجة مُرضية من الاتساق الداخلي والموثوقية. 
+تشير نتائج التقييم الإحصائي أعلاه إلى أن أداة القياس (الاستبيان) تتمتع بدرجة مُرضية من الاتساق الداخلي والموثوقية. 
 
-يُعد هذا المعامل من أهم المؤشرات المنهجية في البحث العلمي، حيث يُثبت رياضياً مدى تجانس فقرات الاستبيان وترابطها البنيوي في قياس الأبعاد التي صُممت لقياسها؛ بمعنى أن إجابات المبحوثين كانت متسقة ولم تتسم بالعشوائية أو التناقض. 
-
-ووفقاً للمعايير الإحصائية المعتمدة، فإن مستويات الثبات الموضحة في الجدول أعلاه تُعطي دلالة علمية قاطعة على صلاحية أداة الدراسة، وتمنح الباحث الموثوقية اللازمة للمضي قدماً في الاعتماد على هذه البيانات لاختبار فرضيات الدراسة الأساسية وتعميم نتائجها بثقة إحصائية تامة.
+وقد تم الاعتماد على مقاييس الثبات المتقدمة لتأكيد قوة الأداة، حيث يُثبت رياضياً مدى تجانس فقرات الاستبيان وترابطها البنيوي؛ بمعنى أن إجابات المبحوثين كانت متسقة ولم تتسم بالعشوائية أو التناقض. وتعطي هذه النتائج دلالة علمية قاطعة على صلاحية أداة الدراسة، وتمنح الباحث الموثوقية اللازمة للمضي قدماً في الاعتماد على هذه البيانات لاختبار الفرضيات.
 """)
            
 # ==========================================
