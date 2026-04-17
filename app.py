@@ -417,7 +417,7 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-     st.sidebar.title("⚙️ بناء الهيكل التنظيمي (Constructs & Dimensions)")
+ st.sidebar.title("⚙️ بناء الهيكل التنظيمي (Constructs & Dimensions)")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
@@ -488,6 +488,7 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة الأبعاد من القائمة الجانبية للبدء.")
         else:
+        
             # التبويبات الثمانية
            # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
            # تعريف 6 تبويبات احترافية (بعد إزالة التبويبات اليدوية القديمة)
