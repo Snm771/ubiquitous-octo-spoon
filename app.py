@@ -166,7 +166,7 @@ st.markdown(f"""
         scrollbar-width: none !important; 
     }}
     .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
-        display: none !important;
+        display: none !important; 
     }}
     .stTabs [data-baseweb="tab"] {{
         white-space: nowrap !important;
@@ -279,12 +279,6 @@ st.markdown(f"""
         border: 1px solid rgba(128,128,128,0.1) !important;
     }}
 
-    /* تنسيق خاص للأبعاد الفرعية في القائمة الجانبية */
-    .sub-dimension-container {
-        padding-right: 15px;
-        border-right: 2px solid #d4af37;
-        margin-bottom: 10px;
-    }
     </style>
 
     <div class="hero-container">
@@ -340,6 +334,7 @@ def generate_detailed_explanation(results, hypothesis, api_key):
     3. تفسير اتجاه العلاقة أو حجم الأثر بشكل دقيق.
     4. قرار واضح بـ (قبول) أو (رفض) الفرضية.
     5. فقرة مناقشة النتائج وربطها بشكل افتراضي منطقي مع الدراسات السابقة والنظريات العلمية.
+    
     اجعل اللغة أكاديمية، رصينة، واحترافية جداً باللغة العربية.
     """
     return run_ai(prompt, api_key)
@@ -387,7 +382,6 @@ def smart_classify_columns(df):
         if col.lower() in ['timestamp', 'unnamed: 0']: continue
         words_count = len(str(col).split())
         is_demo = any(keyword in str(col).lower() for keyword in demo_keywords) and words_count <= 4
-    
         if is_demo: categorical_cols.append(col)
         else:
             converted = pd.to_numeric(df[col], errors='coerce')
@@ -416,68 +410,35 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        st.sidebar.title("⚙️ بناء الهيكل التنظيمي (Constructs & Dimensions)")
+        st.sidebar.title("⚙️ بناء المحاور (Dimensions)")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # 🌟 التعديل السحري: بناء القائمة الهرمية 🌟
-        num_main_constructs = st.sidebar.number_input("🔢 عدد المتغيرات الرئيسية (مثال: مستقل، تابع، وسيط):", min_value=1, max_value=10, value=2)
+        num_dims = st.sidebar.number_input("🔢 كم عدد المحاور/الأبعاد في دراستك؟", min_value=1, max_value=15, value=6)
         
-        dimensions_dict = {} # لتخزين الأبعاد الفرعية (الأصلي)
-        analysis_cols = []   # لتخزين جميع المتغيرات (الرئيسية والفرعية) للتحليل
+        dimensions_dict = {}
+        analysis_cols = []
         active_questions = []
-        constructs_dict = {} # قاموس جديد لتخزين الهيكل الهرمي
         
-        available_questions = all_questions.copy() # نسخة للتحكم بالأسئلة المتبقية
-
-        for i in range(int(num_main_constructs)):
+        chunk_size = max(1, len(all_questions) // int(num_dims)) if all_questions else 1
+        
+        for i in range(int(num_dims)):
             st.sidebar.markdown(f"---")
-            construct_name = st.sidebar.text_input(f"اسم المتغير الرئيسي {i+1}:", f"المتغير {i+1}", key=f"construct_name_{i}")
-            num_sub_dims = st.sidebar.number_input(f"🔢 كم عدد أبعاد ({construct_name})؟", min_value=1, max_value=10, value=1, key=f"num_dims_{i}")
+            dim_name = st.sidebar.text_input(f"اسم المحور {i+1}:", f"المحور {i+1}", key=f"name_{i}")
+            start_idx = i * chunk_size
+            end_idx = start_idx + chunk_size if i < int(num_dims) - 1 else len(all_questions)
+            default_cols = all_questions[start_idx:end_idx] if all_questions else []
+            dim_cols = st.sidebar.multiselect(f"أسئلة {dim_name}:", all_questions, default=default_cols, key=f"cols_{i}")
             
-            construct_cols = [] # جميع أسئلة هذا المتغير الرئيسي
-            
-            # قسم الأبعاد الفرعية
-            st.sidebar.markdown(f'<div class="sub-dimension-container">', unsafe_allow_html=True)
-            for j in range(int(num_sub_dims)):
-                dim_name = st.sidebar.text_input(f"اسم البعد {j+1} التابع لـ ({construct_name}):", f"البعد {j+1}", key=f"dim_name_{i}_{j}")
+            if dim_cols:
+                dimensions_dict[dim_name] = dim_cols
+                df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
+                df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
+                analysis_cols.append(dim_name)
+                active_questions.extend(dim_cols)
                 
-                # توزيع ذكي للأسئلة المتبقية كقيم افتراضية
-                chunk_size = max(1, len(available_questions) // max(1, int(num_sub_dims) - j)) if available_questions else 1
-                default_cols = available_questions[:chunk_size] if available_questions else []
-                
-                dim_cols = st.sidebar.multiselect(f"أسئلة ({dim_name}):", all_questions, default=default_cols, key=f"dim_cols_{i}_{j}")
-                
-                if dim_cols:
-                    dimensions_dict[dim_name] = dim_cols
-                    construct_cols.extend(dim_cols)
-                    
-                    # حساب متوسط البعد
-                    df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
-                    df_encoded[dim_name] = df_encoded[dim_cols].mean(axis=1)
-                    analysis_cols.append(dim_name)
-                    active_questions.extend(dim_cols)
-                    
-                    # إزالة الأسئلة المختارة من القائمة المتاحة
-                    available_questions = [q for q in available_questions if q not in dim_cols]
-            st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-            # إذا كان هناك أبعاد تم تحديدها، قم بإنشاء وحساب المتغير الرئيسي
-            if construct_cols:
-                # إزالة التكرارات من قائمة أسئلة المتغير الرئيسي
-                construct_cols = list(dict.fromkeys(construct_cols))
-                constructs_dict[construct_name] = construct_cols
-                
-                # حساب متوسط المتغير الرئيسي بناءً على جميع أسئلة أبعاده الفرعية
-                df_encoded[construct_name] = df_encoded[construct_cols].mean(axis=1)
-                
-                # إضافة المتغير الرئيسي كخيار للتحليل!
-                analysis_cols.append(construct_name)
-                # إضافة المتغير الرئيسي أيضاً كـ "بعد" وهمي لكي يظهر في نتائج الثبات (Cronbach's Alpha)
-                dimensions_dict[construct_name] = construct_cols 
-
         active_questions = list(dict.fromkeys(active_questions))
 
         if len(active_questions) > 0:
@@ -485,8 +446,10 @@ if uploaded_file is not None:
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
 
         if not analysis_cols:
-            st.warning("يرجى تحديد أسئلة الأبعاد من القائمة الجانبية للبدء.")
+            st.warning("يرجى تحديد أسئلة المحاور من القائمة الجانبية للبدء.")
         else:
+            # التبويبات الثمانية
+           # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
            # تعريف 6 تبويبات احترافية (بعد إزالة التبويبات اليدوية القديمة)
             tabs_names = [
                 "👥 عينة الدراسة", "📊 الإحصاء الوصفي", "🧪 الثبات (ألفا)", 
@@ -496,7 +459,6 @@ if uploaded_file is not None:
                 "🧠 AI Analyst", "📌 Results", "💡 Recommendations"
             ]
             tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tabs_names)
-            
             # ==========================================
             # 1. تبويب عينة الدراسة ✅ مع الرسوم المتعددة والمجموع
             # ==========================================
@@ -514,14 +476,13 @@ if uploaded_file is not None:
                             'التكرار': [len(df_encoded)],
                             'النسبة (%)': [100.00]
                         }, index=['📊 المجموع الكلي ✓'])
-    
                         demo_df_with_total = pd.concat([demo_df, total_row])
                         
                         col1, col2 = st.columns(2)
                         with col1: 
                             st.dataframe(demo_df_with_total, use_container_width=True)
                             chart_type_demo = st.radio(f"اختر نوع الرسم لـ ({col}):", ["دائري (Pie)", "أعمدة (Bar)", "دائري مجوف (Donut)", "خطي (Line)", "أعمدة أفقية (H-Bar)"], key=f"chart_{col}", horizontal=True)
-                             
+                            
                         with col2: 
                             if chart_type_demo == "دائري (Pie)":
                                 fig = px.pie(demo_df, values='التكرار', names=demo_df.index, height=350)
@@ -533,7 +494,7 @@ if uploaded_file is not None:
                                 fig = px.line(demo_df, x=demo_df.index, y='التكرار', markers=True, height=350)
                             else:
                                 fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
-                             
+                            
                             # 👇=== التعديل السحري لترتيب مفتاح الرسم (Legend) ومنع قص النص ===👇
                             fig.update_layout(
                                 legend=dict(
@@ -568,15 +529,15 @@ if uploaded_file is not None:
             # ==========================================
             with tab2:
                 st.subheader("📊 الإحصاء الوصفي (المتوسطات والانحرافات المعيارية)")
-                st.markdown("### 1️⃣ الإحصاء العام للمتغيرات والأبعاد")
+                st.markdown("### 1️⃣ الإحصاء العام للمحاور والأبعاد")
                 desc_df = df_encoded[analysis_cols].describe().T
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
                 
                 if api_key:
-                    if st.button("✨ توليد قراءة ذكية لجدول المتغيرات والأبعاد", key="ai_desc"):
+                    if st.button("✨ توليد قراءة ذكية لجدول المحاور", key="ai_desc"):
                         with st.spinner("جاري التحليل..."):
-                            st.success(get_table_explanation(desc_df.to_markdown(), "المتوسطات والانحرافات المعيارية للمتغيرات والأبعاد", api_key))
+                            st.success(get_table_explanation(desc_df.to_markdown(), "المتوسطات والانحرافات المعيارية للمحاور", api_key))
 
                 st.markdown(f"### 2️⃣ الإحصاء التفصيلي لجميع فقرات الاستبيان (العدد: {len(active_questions)})")
                 if active_questions:
@@ -587,7 +548,7 @@ if uploaded_file is not None:
                 st.markdown("### 📝 التفسير الأكاديمي:")
                 st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
 
-            # ==========================================
+       # ==========================================
             # 3. الثبات
             # ==========================================
             with tab3:
@@ -611,7 +572,7 @@ if uploaded_file is not None:
                         eval_text = evaluate_alpha(a_val)
                         
                         alpha_results.append({
-                            "المتغير / البعد": dim_name, 
+                            "المحور / البعد": dim_name, 
                             "عدد العبارات": len(cols), 
                             "معامل ألفا": round(a_val, 3),
                             "التقييم": eval_text
@@ -638,7 +599,7 @@ if uploaded_file is not None:
                     total_eval = evaluate_alpha(a_total)
                     
                     alpha_results.append({
-                        "المتغير / البعد": "الاستبيان ككل", 
+                        "المحور / البعد": "الاستبيان ككل", 
                         "عدد العبارات": len(active_questions), 
                         "معامل ألفا": round(a_total, 3),
                         "التقييم": total_eval
@@ -646,7 +607,7 @@ if uploaded_file is not None:
                     
                     # 🔹 3. الحفظ بصمت في الذاكرة لتبويب النتائج
                     st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يعكس مستوى ({total_eval}) من الاتساق الداخلي."
-                
+
                 if alpha_results:
                     st.dataframe(pd.DataFrame(alpha_results).style.highlight_max(subset=['معامل ألفا'], color='rgba(212, 175, 55, 0.2)'), use_container_width=True)
                     
@@ -661,11 +622,12 @@ if uploaded_file is not None:
                     st.info("""
 تشير نتائج التقييم الإحصائي باستخدام معامل ألفا كرونباخ (Cronbach's Alpha) إلى أن أداة القياس (الاستبيان) تتمتع بدرجة مُرضية من الاتساق الداخلي والموثوقية. 
 
-يُعد هذا المعامل من أهم المؤشرات المنهجية في البحث العلمي، حيث يُثبت رياضياً مدى تجانس فقرات الاستبيان وترابطها البنيوي في قياس الأبعاد التي صُممت لقياسها؛ بمعنى أن إجابات المبحوثين كانت متسقة ولم تتسم بالعشوائية أو التناقض.
+يُعد هذا المعامل من أهم المؤشرات المنهجية في البحث العلمي، حيث يُثبت رياضياً مدى تجانس فقرات الاستبيان وترابطها البنيوي في قياس الأبعاد التي صُممت لقياسها؛ بمعنى أن إجابات المبحوثين كانت متسقة ولم تتسم بالعشوائية أو التناقض. 
+
 ووفقاً للمعايير الإحصائية المعتمدة، فإن مستويات الثبات الموضحة في الجدول أعلاه تُعطي دلالة علمية قاطعة على صلاحية أداة الدراسة، وتمنح الباحث الموثوقية اللازمة للمضي قدماً في الاعتماد على هذه البيانات لاختبار فرضيات الدراسة الأساسية وتعميم نتائجها بثقة إحصائية تامة.
 """)
            
-            # ==========================================
+# ==========================================
             # 4. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.5 - المتغيرات المتعددة الشاملة)
             # ==========================================
             with tab4:
@@ -797,9 +759,9 @@ if uploaded_file is not None:
                                 if is_diff: 
                                     h_indep = st.multiselect("المتغيرات المستقلة (اختر فئة ديموغرافية أو أكثر):", categorical_cols, default=default_indep, key=f"indep_{i}")
                                 else: 
-                                    h_indep = st.multiselect("المتغيرات المستقلة (المؤثرات - يمكنك اختيار متغيراً رئيسياً أو أبعاداً):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
+                                    h_indep = st.multiselect("المتغيرات المستقلة (المؤثرات - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_indep, key=f"indep_ax_{i}")
                                 
-                                h_dep = st.multiselect("المتغيرات التابعة (النتائج - يمكنك اختيار متغيراً رئيسياً أو أبعاداً):", analysis_cols, default=default_dep, key=f"dep_{i}")
+                                h_dep = st.multiselect("المتغيرات التابعة (النتائج - يمكنك اختيار أكثر من محور):", analysis_cols, default=default_dep, key=f"dep_{i}")
                                 
                                 if st.button(f"🚀 تنفيذ الاختبار، رسم المخطط، وكتابة المناقشة ({i})", key=f"exec_{i}"):
                                     if not h_indep or not h_dep:
@@ -887,7 +849,7 @@ if uploaded_file is not None:
                                                 
                                             except Exception as e:
                                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
-            # ==========================================
+          # ==========================================
             # 5. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
             # ==========================================
             with tab5:
@@ -964,7 +926,7 @@ if uploaded_file is not None:
                 
                 if st.session_state['dim_recs']:
                     for idx, rec in enumerate(st.session_state['dim_recs'], 1):
-                        st.success(f"**{idx}. المتغير/البعد:** {rec['dim']} | **المتوسط:** {rec['mean']}\n\n📌 {rec['rec']}")
+                        st.success(f"**{idx}. المحور:** {rec['dim']} | **المتوسط:** {rec['mean']}\n\n📌 {rec['rec']}")
                 else:
                     st.warning("⚠️ يرجى زيارة تبويب (النتائج) أولاً لتوليد التوصيات.")
 
