@@ -730,8 +730,8 @@ if uploaded_file is not None:
                                 st.info(f"سعياً للتحقق من القدرة التنبؤية للمتغيرات المستقلة ومعرفة حجم أثرها الفعلي، تم إجراء تحليل الانحدار الخطي لقياس أثر المتغيرات المُدخلة على المتغير التابع ({dep_var}). وتشير المخرجات الإحصائية إلى أن النموذج المقترح يمتلك قدرة تفسيرية ملحوظة. استناداً إلى قيمة معامل التحديد ($R^2 = {r2:.3f}$)، يمكن الاستنتاج علمياً بأن المتغيرات المستقلة المُدرجة قادرة مجتمعة على تفسير والتحكم بما نسبته **({float(r2)*100:.1f}%)** من إجمالي التباين الحاصل في المتغير التابع.")
                             except: st.error("حدث خطأ في الانحدار.")
 
-            # ==========================================
-            # 7. التبويب السابع: محلل الفرضيات الذكي (7 فرضيات + تحديد آلي)
+           # ==========================================
+            # 7. التبويب السابع: محلل الفرضيات الذكي (النسخة الخارقة المدمجة)
             # ==========================================
             with tab7:
                 st.header("🧠 المحلل الذكي للفرضيات (AI Hypothesis Engine)")
@@ -740,6 +740,14 @@ if uploaded_file is not None:
                 if not api_key:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية.")
                 else:
+                    import difflib # مكتبة المطابقة الذكية للكلمات
+
+                    # دالة مساعدة للاختيار التلقائي للمتغيرات (Auto-Mapping)
+                    def get_best_match_index(target_word, options_list):
+                        if not target_word: return 0
+                        matches = difflib.get_close_matches(target_word, options_list, n=1, cutoff=0.2)
+                        return options_list.index(matches[0]) if matches else 0
+
                     # تكرار 7 مرات لإنشاء 7 مساحات للفرضيات
                     for i in range(1, 8):
                         with st.expander(f"📌 الفرضية رقم ({i})"):
@@ -751,54 +759,88 @@ if uploaded_file is not None:
                                         res_ai = analyze_hypothesis_text(u_hypo, api_key)
                                         st.session_state[f'ai_analysis_{i}'] = res_ai
                                         
-                                        # 🪄 التحديد التلقائي لنوع الاختبار بناءً على الكلمات المفتاحية
-                                        if "تأثير" in res_ai or "Regression" in res_ai or "انحدار" in res_ai:
+                                        # 🪄 التحديد التلقائي لنوع الاختبار (مقتبس من كود الاخت)
+                                        t_lower = res_ai.lower() + u_hypo.lower()
+                                        if "أثر" in t_lower or "تأثير" in t_lower or "regression" in t_lower or "انحدار" in t_lower:
                                             st.session_state[f'test_idx_{i}'] = 1
-                                        elif "فروق" in res_ai or "اختلاف" in res_ai or "T-test" in res_ai or "ANOVA" in res_ai:
+                                        elif "فروق" in t_lower or "اختلاف" in t_lower or "t-test" in t_lower or "anova" in t_lower:
                                             st.session_state[f'test_idx_{i}'] = 2
                                         else:
                                             st.session_state[f'test_idx_{i}'] = 0
+                                            
+                                        # محاولة استخراج أسماء المتغيرات للربط التلقائي
+                                        # نفترض أن الذكاء الاصطناعي سيرجع النص وفيه "المتغير المستقل: كذا"
+                                        lines = res_ai.split('\n')
+                                        for line in lines:
+                                            if "مستقل" in line: st.session_state[f'auto_indep_{i}'] = line.split(":")[-1].strip()
+                                            if "تابع" in line: st.session_state[f'auto_dep_{i}'] = line.split(":")[-1].strip()
+
                                     except Exception as e:
                                         st.error(f"خطأ في الاتصال بالذكاء الاصطناعي: {e}")
                                         
                             # عرض النتيجة وتحديد نوع الاختبار تلقائياً
                             if f'ai_analysis_{i}' in st.session_state:
-                                st.success("تم تحليل الفرضية بنجاح:")
+                                st.success("✅ تم تحليل الفرضية بنجاح:")
                                 st.info(st.session_state[f'ai_analysis_{i}'])
-                                
                                 st.markdown("---")
-                                # سحب التحديد التلقائي
+                                
+                                # سحب التحديد التلقائي للاختبار والمتغيرات
                                 default_test = st.session_state.get(f'test_idx_{i}', 0)
+                                auto_indep_word = st.session_state.get(f'auto_indep_{i}', "")
+                                auto_dep_word = st.session_state.get(f'auto_dep_{i}', "")
                                 
                                 col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"], index=default_test, key=f"test_type_{i}")
                                 
-                                if "فروق" in col_type: h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols, key=f"indep_{i}")
-                                else: h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols, key=f"indep_ax_{i}")
+                                # تطبيق المطابقة الذكية لاختيار المتغيرات الصحيحة من القائمة تلقائياً
+                                if "فروق" in col_type: 
+                                    def_indep_idx = get_best_match_index(auto_indep_word, categorical_cols) if categorical_cols else 0
+                                    h_indep = st.selectbox("المتغير المستقل (الفئة الديموغرافية):", categorical_cols, index=def_indep_idx, key=f"indep_{i}")
+                                else: 
+                                    def_indep_idx = get_best_match_index(auto_indep_word, analysis_cols) if analysis_cols else 0
+                                    h_indep = st.selectbox("المتغير المستقل (المؤثر/المحور):", analysis_cols, index=def_indep_idx, key=f"indep_ax_{i}")
                                 
-                                h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=len(analysis_cols)-1 if len(analysis_cols)>0 else 0, key=f"dep_{i}")
+                                def_dep_idx = get_best_match_index(auto_dep_word, analysis_cols) if analysis_cols else (len(analysis_cols)-1 if len(analysis_cols)>0 else 0)
+                                h_dep = st.selectbox("المتغير التابع (النتيجة/المحور):", analysis_cols, index=def_dep_idx, key=f"dep_{i}")
                                 
-                                if st.button(f"🚀 تنفيذ وكتابة مناقشة النتائج ({i})", key=f"exec_{i}"):
-                                    with st.spinner("جاري إجراء الاختبار وتأليف التفسير الأكاديمي..."):
+                                if st.button(f"🚀 تنفيذ الاختبار، رسم المخطط، وكتابة المناقشة ({i})", key=f"exec_{i}"):
+                                    with st.spinner("جاري العمليات المعقدة..."):
                                         clean_df = df_encoded[[h_indep, h_dep]].dropna()
                                         results_str = ""
                                         try:
-                                            if "علاقة" in col_type:
-                                                res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
-                                                results_str = res.to_markdown()
-                                                st.dataframe(res)
-                                            elif "تأثير" in col_type:
-                                                res = pg.linear_regression(clean_df[[h_indep]].astype(float), clean_df[h_dep].astype(float))
-                                                results_str = res.to_markdown()
-                                                st.dataframe(res)
-                                            elif "فروق" in col_type:
-                                                grps = clean_df[h_indep].unique()
-                                                if len(grps) == 2: res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
-                                                else:
-                                                    valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
-                                                    res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
-                                                results_str = res.to_markdown()
-                                                st.dataframe(res)
+                                            col1, col2 = st.columns([1, 1]) # تقسيم الشاشة لجدول ورسمة
                                             
+                                            with col1:
+                                                st.markdown("**النتائج الإحصائية:**")
+                                                if "علاقة" in col_type:
+                                                    res = pg.corr(clean_df[h_indep].astype(float), clean_df[h_dep].astype(float), method='pearson')
+                                                    results_str = res.to_markdown()
+                                                    st.dataframe(res)
+                                                elif "تأثير" in col_type:
+                                                    res = pg.linear_regression(clean_df[[h_indep]].astype(float), clean_df[h_dep].astype(float))
+                                                    results_str = res.to_markdown()
+                                                    st.dataframe(res)
+                                                elif "فروق" in col_type:
+                                                    grps = clean_df[h_indep].unique()
+                                                    if len(grps) == 2: res = pg.ttest(clean_df[clean_df[h_indep]==grps[0]][h_dep].astype(float), clean_df[clean_df[h_indep]==grps[1]][h_dep].astype(float))
+                                                    else:
+                                                        valid_grps = clean_df[h_indep].value_counts()[clean_df[h_indep].value_counts()>=2].index
+                                                        res = pg.anova(data=clean_df[clean_df[h_indep].isin(valid_grps)], dv=h_dep, between=h_indep)
+                                                    results_str = res.to_markdown()
+                                                    st.dataframe(res)
+                                            
+                                            with col2:
+                                                st.markdown("**المخطط البياني التلقائي:**")
+                                                if "فروق" in col_type:
+                                                    # رسم صندوق للفروق
+                                                    fig = px.box(clean_df, x=h_indep, y=h_dep, color=h_indep, height=300)
+                                                else:
+                                                    # رسم انتشار للعلاقة/التأثير
+                                                    fig = px.scatter(clean_df, x=h_indep, y=h_dep, trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
+                                                
+                                                fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                                                st.plotly_chart(fig, use_container_width=True)
+
+                                            # كتابة التفسير الأكاديمي الشامل
                                             final_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
                                             st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
                                             st.success(final_explanation)
@@ -816,7 +858,7 @@ if uploaded_file is not None:
                                             if not found:
                                                 st.session_state['hypothesis_history'].append({'id': i, 'text': u_hypo, 'result': decision_val})
                                                 
-                                            st.info("✅ تم حفظ نتيجة هذه الفرضية لتظهر في تبويب النتائج والتوصيات.")
+                                            st.info("✅ تم حفظ نتيجة هذه الفرضية والمخطط لتظهر في التقرير النهائي.")
                                             
                                         except Exception as e:
                                             st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
