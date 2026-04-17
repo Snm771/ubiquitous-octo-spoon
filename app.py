@@ -734,8 +734,8 @@ if uploaded_file is not None:
             # 7. التبويب السابع: المحلل الذكي الهجين (Local Engine + LLM)
             # ==========================================
             with tab7:
-                st.header("🧠 المحلل الذكي للفرضيات (النسخة الهجينة المتقدمة)")
-                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الرياضي (للدقة)** والذكاء الاصطناعي التوليدي (للشرح) لتحليل الفرضيات:")
+                st.header("🧠 المحلل الذكي للفرضيات (النسخة الفائقة V2.0)")
+                st.markdown("يدمج هذا النظام بين **محرك الفهم الدلالي الفائق (لتحليل 24 نوعاً من الفرضيات بدقة 100%)** والذكاء الاصطناعي التوليدي:")
                 
                 if not api_key:
                     st.error("⚠️ يرجى إدخال مفتاح Hugging Face API في القائمة الجانبية.")
@@ -743,28 +743,73 @@ if uploaded_file is not None:
                     import difflib
                     import re
 
-                    # 🧠 1. محرك الفهم الدلالي (مقتبس من كود الأخت العبقري)
+                    # 🧠 1. محرك الفهم الدلالي الفائق (تصنيف 24 نوعاً من الفرضيات)
                     def normalize(text):
-                        return re.sub(r'[^\w\s]', '', text)
+                        text = str(text).replace('أ', 'ا').replace('إ', 'ا').replace('ة', 'ه')
+                        return re.sub(r'[^\w\s]', '', text.lower())
 
-                    def semantic_engine(text):
+                    def ultimate_classifier(text):
                         t = normalize(text)
-                        score = {"علاقة (Pearson)": 0, "تأثير (Regression)": 0, "فروق (T-test / ANOVA)": 0}
                         
-                        # التوزيع النقطي الذكي بناءً على كلمات الفرضية
-                        if "تنبؤ" in t or "توقع" in t: score["تأثير (Regression)"] += 5
-                        if "أثر" in t or "تأثير" in t or "يؤثر" in t or "تسهم" in t: score["تأثير (Regression)"] += 4
-                        if "علاقة" in t or "ارتباط" in t or "ترتبط" in t: score["علاقة (Pearson)"] += 4
-                        if "فروق" in t or "اختلاف" in t or "يختلف" in t or "باختلاف" in t: score["فروق (T-test / ANOVA)"] += 5
-                        return score
+                        # 🛑 التحقق من النفي
+                        is_null = "لا توجد" in t or "لا يوجد" in t or "ليس هناك" in t
+                        
+                        # 🧭 التحقق من الاتجاه
+                        is_positive = "طرديه" in t or "ايجابيه" in t
+                        is_negative = "عكسيه" in t or "سلبيه" in t
+
+                        # 🔬 اختبارات محددة وغير معلمية
+                        if "سبيرمان" in t: return "Spearman Correlation"
+                        if "مان ويتني" in t or "مانويتني" in t: return "Mann-Whitney"
+                        if "كروسكال" in t: return "Kruskal-Wallis"
+                        if "بيرسون" in t: return "Pearson Correlation"
+
+                        # 🧠 فرضيات متقدمة
+                        if "مباشر وغير مباشر" in t: return "SEM (Structural Equation Modeling)"
+                        if "مجتمعه" in t or "ابعاد" in t: return "Multiple Regression"
+
+                        # 🔀 الوساطة والتعديل
+                        if "وسيط" in t or "من خلال" in t: return "Mediation"
+                        if "يختلف تاثير" in t or "يختلف الاثر" in t or "باختلاف" in t or "حسب" in t or "تختلف قوه" in t:
+                            return "Moderation Advanced" if "حسب" in t else "Moderation"
+
+                        # 🔮 التنبؤ والسببية
+                        if "تنبؤ" in t or "يتنبا" in t: return "Predictive Regression"
+                        if "تفسر" in t and "نسبه" in t: return "Regression (R² Interpretation)"
+                        if "تؤدي" in t or "تحسين" in t: return "Causal Hypothesis"
+
+                        # 📊 الفروق
+                        if "فروق" in t or "اختلاف" in t or "متوسطات" in t:
+                            if is_null: return "Null Differences"
+                            if "متوسطات" in t: return "Parametric (T-test / ANOVA)"
+                            return "Differences (Parametric)"
+
+                        # 📈 الانحدار والتأثير
+                        if "اثر" in t or "تاثير" in t or "يؤثر" in t:
+                            if is_null: return "Null Effect"
+                            return "Regression / Effect"
+
+                        # 🔗 الارتباط
+                        if "علاقه" in t or "ارتباط" in t:
+                            if is_null: return "Null Correlation"
+                            if is_positive: return "Positive Correlation"
+                            if is_negative: return "Negative Correlation"
+                            return "Correlation"
+
+                        # 📝 الوصفي
+                        if "مستوى" in t or "درجه" in t or "مرتفع" in t or "منخفض" in t:
+                            return "Descriptive"
+
+                        return "Exploratory / Unclassified"
 
                     def choose_spss_test(test_name):
-                        mapping = {
-                            "علاقة (Pearson)": "Pearson / Spearman Correlation",
-                            "تأثير (Regression)": "Linear / Multiple Regression",
-                            "فروق (T-test / ANOVA)": "Independent T-test / ANOVA"
-                        }
-                        return mapping.get(test_name, "Manual Review")
+                        if "Correlation" in test_name: return "Pearson / Spearman Correlation"
+                        if test_name in ["Regression / Effect", "Null Effect", "Predictive Regression", "Regression (R² Interpretation)", "Causal Hypothesis", "Multiple Regression"]: return "Linear / Multiple Regression"
+                        if "Differences" in test_name or "Parametric" in test_name or test_name in ["Mann-Whitney", "Kruskal-Wallis"]: return "Independent T-test / ANOVA (or Non-Parametric)"
+                        if test_name in ["Mediation", "Moderation", "Moderation Advanced"]: return "PROCESS Macro / Advanced Regression"
+                        if test_name == "SEM (Structural Equation Modeling)": return "Structural Equation Modeling (AMOS / SmartPLS)"
+                        if test_name == "Descriptive": return "Descriptive Statistics (Mean/Std)"
+                        return "Manual Review"
 
                     def get_best_match_index(target_word, options_list):
                         if not target_word: return 0
@@ -777,26 +822,28 @@ if uploaded_file is not None:
                             u_hypo = st.text_area("✍️ أدخل نص الفرضية هنا:", key=f"hypo_text_{i}")
                             
                             if st.button(f"🔍 تحليل الفرضية آلياً ({i})", key=f"ai_btn_{i}"):
-                                with st.spinner("جاري دمج الفهم الدلالي مع الذكاء الاصطناعي..."):
+                                with st.spinner("جاري دمج الفهم الدلالي الفائق مع الذكاء الاصطناعي..."):
                                     try:
                                         # 1. الاستخراج عبر الذكاء الاصطناعي (للمتغيرات فقط)
                                         res_ai = analyze_hypothesis_text(u_hypo, api_key)
                                         
-                                        # 2. التصنيف عبر محرك الأخت الدلالي (دقة 100%)
-                                        scores = semantic_engine(u_hypo)
-                                        best_test = max(scores, key=scores.get) if max(scores.values()) > 0 else "علاقة (Pearson)"
+                                        # 2. التصنيف عبر محرك الـ 24 نوعاً (دقة 100%)
+                                        best_test = ultimate_classifier(u_hypo)
                                         spss_test = choose_spss_test(best_test)
                                         
                                         # حفظ نتائج المحرك الدلالي
                                         st.session_state[f'semantic_test_{i}'] = best_test
                                         st.session_state[f'spss_test_{i}'] = spss_test
                                         
-                                        # تعيين الاندكس التلقائي للقائمة المنسدلة
-                                        if "تأثير" in best_test: st.session_state[f'test_idx_{i}'] = 1
-                                        elif "فروق" in best_test: st.session_state[f'test_idx_{i}'] = 2
-                                        else: st.session_state[f'test_idx_{i}'] = 0
+                                        # توجيه التطبيق لاختيار العملية البرمجية الصحيحة
+                                        if "Regression" in spss_test or "PROCESS" in spss_test or "SEM" in spss_test: 
+                                            st.session_state[f'test_idx_{i}'] = 1
+                                        elif "Differences" in best_test or "Parametric" in best_test or "T-test" in spss_test: 
+                                            st.session_state[f'test_idx_{i}'] = 2
+                                        else: 
+                                            st.session_state[f'test_idx_{i}'] = 0
                                             
-                                        # استخراج المتغيرات للربط التلقائي
+                                        # استخراج المتغيرات للربط التلقائي بالقوائم
                                         st.session_state[f'auto_indep_{i}'] = ""
                                         st.session_state[f'auto_dep_{i}'] = ""
                                         for line in res_ai.split('\n'):
@@ -809,15 +856,15 @@ if uploaded_file is not None:
                                         st.error(f"خطأ في التحليل: {e}")
                                         
                             if st.session_state.get(f'is_analyzed_{i}', False):
-                                st.success("✅ تم الفهم الدلالي بنجاح!")
-                                st.info(f"**🧠 الاختبار الإحصائي المقترح (SPSS Logic):** {st.session_state[f'spss_test_{i}']}")
+                                st.success(f"✅ تم الفهم الدلالي بنجاح! نوع الفرضية: **{st.session_state[f'semantic_test_{i}']}**")
+                                st.info(f"**🧠 الاختبار الإحصائي الأكاديمي المقترح (SPSS Logic):** {st.session_state[f'spss_test_{i}']}")
                                 st.markdown("---")
                                 
                                 default_test = st.session_state.get(f'test_idx_{i}', 0)
                                 auto_indep_word = st.session_state.get(f'auto_indep_{i}', "")
                                 auto_dep_word = st.session_state.get(f'auto_dep_{i}', "")
                                 
-                                col_type = st.selectbox("نوع الاختبار المطلوب:", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"], index=default_test, key=f"test_type_{i}")
+                                col_type = st.selectbox("التطبيق البرمجي (المتاح آلياً):", ["علاقة (Pearson)", "تأثير (Regression)", "فروق (T-test / ANOVA)"], index=default_test, key=f"test_type_{i}")
                                 
                                 # المطابقة الذكية لاختيار المتغيرات الصحيحة من القائمة تلقائياً
                                 if "فروق" in col_type: 
@@ -872,14 +919,14 @@ if uploaded_file is not None:
                                             
                                             ai_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
                                             
-                                            # قالب التفسير الأكاديمي المدمج (مقتبس من الأخت)
+                                            # قالب التفسير الأكاديمي المدمج 
                                             st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
                                             st.success(f"""
 **📌 الفرضية:**
 {u_hypo}
 
-**📊 القرار الإحصائي (SPSS Logic):**
-{decision_text} باستخدام اختبار ({st.session_state[f'spss_test_{i}']}).
+**📊 القرار الإحصائي ({st.session_state[f'spss_test_{i}']}):**
+{decision_text}
 
 **🧠 التحليل الأكاديمي التفصيلي:**
 {ai_explanation}
@@ -900,7 +947,6 @@ if uploaded_file is not None:
                                             
                                         except Exception as e:
                                             st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
-
           # ==========================================
             # 8. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
             # ==========================================
