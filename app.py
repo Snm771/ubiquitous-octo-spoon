@@ -415,26 +415,6 @@ if uploaded_file is not None:
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
-
-        # 👇 ========================================== 👇
-        # 🌟 الميزة الجديدة: معالجة الأسئلة العكسية (Reverse Items) 🌟
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🔄 معالجة الأسئلة العكسية (السلبية)")
-        
-        # 1. تحديد نوع مقياس ليكرت
-        likert_max = st.sidebar.number_input("أعلى درجة في مقياس ليكرت (مثال: 5 للمقياس الخماسي):", min_value=2, max_value=10, value=5)
-        
-        # 2. اختيار الأسئلة العكسية
-        reverse_cols = st.sidebar.multiselect("اختر الأسئلة العكسية ليتم قلب درجاتها برمجياً:", all_questions, help="مثال: إذا اختار المبحوث 5 (موافق بشدة) على سؤال سلبي، سيقوم النظام بتحويلها إلى 1 لتصحيح اتجاه التحليل.")
-        
-        # 3. تطبيق خوارزمية القلب رياضياً
-        if reverse_cols:
-            for col in reverse_cols:
-                df_encoded[col] = pd.to_numeric(df_encoded[col], errors='coerce')
-                # معادلة القلب العبقرية: (أعلى قيمة + 1) - الإجابة
-                df_encoded[col] = (likert_max + 1) - df_encoded[col]
-            st.sidebar.success(f"✅ تم تصحيح اتجاه ({len(reverse_cols)}) أسئلة عكسية بنجاح!")
-        # 👆 ========================================== 👆
         
         # 🌟 الهيكل الأساسي (جاهز للتخصيص من قبل الباحث) 🌟
         base_model = {
