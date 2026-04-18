@@ -5,3 +5,7 @@ pingouin
 numpy
 openpyxl
 openai
+python-docx
+kaleido
+scipy
+statsmodels
