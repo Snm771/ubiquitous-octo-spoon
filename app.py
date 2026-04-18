@@ -685,7 +685,10 @@ if uploaded_file is not None:
                     alpha_results.append(row_total)
                     
                     # حفظ بصمت
-                    st.session_state['reliability_result'] = f"بلغ معامل كرونباخ ألفا العام ({round(a_total, 3)}) وهو ما يعكس مستوى ({total_eval}) من الاتساق الداخلي."
+                    # 🔹 3. الحفظ بصمت في الذاكرة بالصياغة الأكاديمية المطلوبة
+                    is_valid = "صالحة للتطبيق" if a_total >= 0.7 else "بحاجة إلى تحسين"
+                    strength = "قوي" if a_total >= 0.7 else "متوسط"
+                    st.session_state['reliability_result'] = f" تبين من خلال تحليل صدق محاور الدراسة وأخذ قيمة معامل الثبات (ألفا كرونباخ) للمحاور تم التحصل على قيمة بلغت ({a_total:.3f})، وهي قيمة {total_eval} تدل على مستوى ثبات {strength} واتساق داخلي لفقرات الاستبيان، مما يشير إلى أن الأداة البحثية تتميز بدرجة مناسبة من الصدق والثبات، وتعد {is_valid} على أفراد عينة الدراسة."
 
                 if alpha_results:
                     # تحويل لـ DataFrame وعرضه
@@ -928,62 +931,53 @@ if uploaded_file is not None:
                                                 
                                             except Exception as e:
                                                 st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
-          # ==========================================
-            # 5. التبويب الثامن: النتائج (نصي ومنظم بالأرقام 1-7) ✅
+ # ==========================================
+            # 5. التبويب الثامن: النتائج (الصياغة الأكاديمية النهائية) ✅
             # ==========================================
             with tab5:
-                st.header("📌 أبرز نتائج الدراسة")
-                res_idx = 1
+                st.header("📌 أبرز نتائج الدراسة (الفصل الرابع)")
+                st.markdown("### 📝 من خلال ردود المبحوثين على محاور الدراسة تم الخروج بما يلي:-\n")
                 
-                # --- 1️⃣ نتيجة عينة الدراسة (النتيجة رقم 1) ---
-                st.subheader("📊 نتائج وصف عينة الدراسة")
-                if st.session_state['sample_results']:
-                    for res in st.session_state['sample_results']:
-                        st.markdown(f"**النتيجة ({res_idx}):** {res}")
-                        res_idx += 1
-                else:
-                    st.info("⚠️ يرجى زيارة تبويب (عينة الدراسة) أولاً لتوليد النتائج.")
-                
-                st.markdown("---")
-
-                # --- 2️⃣ نتيجة الثبات (النتيجة رقم 2) ---
-                st.subheader("🧪 نتائج ثبات أداة الدراسة")
+                # --- 1️⃣ نتيجة الثبات (Cronbach) ---
                 if st.session_state['reliability_result']:
-                    st.markdown(f"**النتيجة ({res_idx}):** {st.session_state['reliability_result']}")
-                    res_idx += 1
+                    st.success(st.session_state['reliability_result'])
                 else:
-                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد النتائج.")
+                    st.info("⚠️ يرجى زيارة تبويب (الثبات) أولاً لتوليد نتيجة الثبات.")
                 
-                st.markdown("---")
+                # --- 2️⃣ نتيجة عينة الدراسة (Demographics) ---
+                if categorical_cols:
+                    summary_parts = []
+                    for col in categorical_cols:
+                        top = df_encoded[col].value_counts().idxmax()
+                        summary_parts.append(f"{col} ({top})")
+                    joined = "، ".join(summary_parts)
+                    
+                    demo_text = f" استنادًا إلى نتائج البيانات الشخصية للمبحوثين اتضح أن غالبية أفراد العينة تتمثل في: {joined}، مما يعكس خصائص مجتمع الدراسة ويسهم في دعم دقة تفسير النتائج."
+                    st.info(demo_text)
+                else:
+                    st.warning("⚠️ لم يتم تحديد متغيرات ديموغرافية (بيانات شخصية) في القائمة الجانبية.")
 
-                # --- 3️⃣ نتائج الفرضيات (النتائج من 3 إلى 7) ---
-                st.subheader("⚖️ نتائج اختبار فرضيات الدراسة")
+                # --- 3️⃣ نتائج الفرضيات (Hypotheses) ---
                 if st.session_state['hypothesis_history']:
-                    # عرض أول 5 فرضيات لتكملة الرقم 7
-                    for h in st.session_state['hypothesis_history'][:5]:
-                        decision = "تم قبول الفرضية" if h['result'] == "accepted" else "تم رفض الفرضية"
-                        st.markdown(f"**النتيجة ({res_idx}):** {decision} ({h['text']}).")
+                    for h in st.session_state['hypothesis_history']:
+                        is_accepted = h['result'] == "accepted"
+                        decision = "تقبل" if is_accepted else "ترفض"
+                        relation = "وجود أثر أو علاقة ذات دلالة إحصائية" if is_accepted else "عدم وجود أثر أو علاقة ذات دلالة إحصائية"
+                        proof = "ثبت معنوياً وإحصائياً" if is_accepted else "لم يثبت إحصائياً"
                         
-                        # الشرح الأكاديمي الثابت
-                        with st.expander(f"📝 عرض الشرح الأكاديمي للنتيجة ({res_idx})"):
-                            st.info("""
-                            تشير هذه النتيجة إلى طبيعة العلاقة بين المتغيرات محل الدراسة وفقًا للتحليل الإحصائي المستخدم.
-                            وقد تم الاعتماد على الاختبار الإحصائي المناسب لاختبار هذه الفرضية بدقة.
-                            كما أظهرت النتائج مستوى الدلالة الإحصائية المعتمد في اتخاذ القرار.
-                            وتعكس هذه النتيجة قوة أو ضعف العلاقة بين المتغيرات المدروسة.
-                            ويمكن تفسير هذه النتيجة في ضوء ما توصلت إليه الدراسات السابقة في نفس المجال.
-                            وبشكل عام توضح هذه النتيجة مدى تأثير المتغير المستقل على المتغير التابع.
-                            """)
-                        res_idx += 1
+                        # صياغة الفرضية بناءً على قالب الأخت مع جعله مرناً ليناسب كل أنواع الفرضيات الـ 24
+                        hypo_text = f""" **نتائج الفرضية:** ({h['text']})
+تشير نتائج التحليل الإحصائي إلى {relation} بين المتغيرات محل الدراسة. وبناءً على ذلك، فإن الفرضية المذكورة **{decision}**، حيث أنه **{proof}** صحة الادعاء. 
+"""
+                        st.warning(hypo_text)
                 else:
                     st.warning("⚠️ لم يتم اختبار أي فرضيات بعد في تبويب (محلل الفرضيات).")
 
-                # --- تفريغ وتوليد التوصيات بصمت في الذاكرة ---
+                # --- تفريغ وتوليد التوصيات بصمت في الذاكرة لتبويب التوصيات ---
                 st.session_state['dim_recs'] = [] 
                 for dim_name, cols in dimensions_dict.items():
                     if cols:
-                        item_means = df_encoded[cols].mean()
-                        overall_mean = item_means.mean()
+                        item_means = df_encoded[cols].apply(pd.to_numeric, errors='coerce').mean()
                         low_items = item_means[item_means <= 3.50]
                         if not low_items.empty:
                             for item_text, mean_val in low_items.items():
