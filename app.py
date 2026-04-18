@@ -858,55 +858,43 @@ if uploaded_file is not None:
                                     if not h_indep or not h_dep:
                                         st.warning("⚠️ يرجى اختيار متغير مستقل واحد وتابع واحد على الأقل.")
                                     else:
-                                        with st.spinner("جاري تنفيذ العمليات للمتغيرات المتعددة..."):
+                                        with st.spinner("جاري تنفيذ العمليات وحفظها بالذاكرة الدائمة..."):
                                             clean_df = df_encoded[h_indep + h_dep].dropna()
                                             results_str = ""
                                             try:
-                                                col1, col2 = st.columns([1, 1])
-                                                
-                                                with col1:
-                                                    st.markdown("**النتائج الإحصائية:**")
-                                                    res_list = []
-                                                    
-                                                    # الدوران حول المتغيرات التابعة لمعالجة كل واحد على حدة
-                                                    for y_col in h_dep:
-                                                        if is_corr:
-                                                            for x_col in h_indep:
-                                                                r = pg.corr(clean_df[x_col].astype(float), clean_df[y_col].astype(float), method='pearson')
-                                                                r.insert(0, 'التابع', y_col)
-                                                                r.insert(0, 'المستقل', x_col)
-                                                                res_list.append(r)
-                                                        elif is_diff:
-                                                            for x_col in h_indep:
-                                                                grps = clean_df[x_col].unique()
-                                                                if len(grps) == 2: r = pg.ttest(clean_df[clean_df[x_col]==grps[0]][y_col].astype(float), clean_df[clean_df[x_col]==grps[1]][y_col].astype(float))
-                                                                else:
-                                                                    valid_grps = clean_df[x_col].value_counts()[clean_df[x_col].value_counts()>=2].index
-                                                                    r = pg.anova(data=clean_df[clean_df[x_col].isin(valid_grps)], dv=y_col, between=x_col)
-                                                                r.insert(0, 'التابع', y_col)
-                                                                r.insert(0, 'الديموغرافي', x_col)
-                                                                res_list.append(r)
-                                                        else: 
-                                                            # الانحدار المتعدد: كل المستقلات معاً على كل تابع
-                                                            r = pg.linear_regression(clean_df[h_indep].astype(float), clean_df[y_col].astype(float))
+                                                res_list = []
+                                                for y_col in h_dep:
+                                                    if is_corr:
+                                                        for x_col in h_indep:
+                                                            r = pg.corr(clean_df[x_col].astype(float), clean_df[y_col].astype(float), method='pearson')
                                                             r.insert(0, 'التابع', y_col)
+                                                            r.insert(0, 'المستقل', x_col)
                                                             res_list.append(r)
-                                                            
-                                                    final_res = pd.concat(res_list)
-                                                    results_str = final_res.to_markdown()
-                                                    st.dataframe(final_res)
-                                                
-                                                with col2:
-                                                    st.markdown(f"**المخطط البياني (يعرض أول متغير مستقل مع أول تابع):**")
-                                                    if is_diff:
-                                                        fig = px.box(clean_df, x=h_indep[0], y=h_dep[0], color=h_indep[0], height=300)
-                                                    else:
-                                                        fig = px.scatter(clean_df, x=h_indep[0], y=h_dep[0], trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
-                                                    
-                                                    fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                                                    st.plotly_chart(fig, use_container_width=True)
+                                                    elif is_diff:
+                                                        for x_col in h_indep:
+                                                            grps = clean_df[x_col].unique()
+                                                            if len(grps) == 2: r = pg.ttest(clean_df[clean_df[x_col]==grps[0]][y_col].astype(float), clean_df[clean_df[x_col]==grps[1]][y_col].astype(float))
+                                                            else:
+                                                                valid_grps = clean_df[x_col].value_counts()[clean_df[x_col].value_counts()>=2].index
+                                                                r = pg.anova(data=clean_df[clean_df[x_col].isin(valid_grps)], dv=y_col, between=x_col)
+                                                            r.insert(0, 'التابع', y_col)
+                                                            r.insert(0, 'الديموغرافي', x_col)
+                                                            res_list.append(r)
+                                                    else: 
+                                                        # الانحدار المتعدد
+                                                        r = pg.linear_regression(clean_df[h_indep].astype(float), clean_df[y_col].astype(float))
+                                                        r.insert(0, 'التابع', y_col)
+                                                        res_list.append(r)
+                                                        
+                                                final_res = pd.concat(res_list)
+                                                results_str = final_res.to_markdown()
 
-                                                # دمج القرار الإحصائي
+                                                if is_diff:
+                                                    fig = px.box(clean_df, x=h_indep[0], y=h_dep[0], color=h_indep[0], height=300)
+                                                else:
+                                                    fig = px.scatter(clean_df, x=h_indep[0], y=h_dep[0], trendline="ols", height=300, color_discrete_sequence=['#d4af37'])
+                                                fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+
                                                 p_cols = [c for c in final_res.columns if 'p-val' in c.lower() or 'p-unc' in c.lower()]
                                                 is_sig = (final_res[p_cols[0]] < 0.05).any() if p_cols else False
                                                 decision_val = "accepted" if is_sig else "rejected"
@@ -914,18 +902,18 @@ if uploaded_file is not None:
                                                 
                                                 ai_explanation = generate_detailed_explanation(results_str, u_hypo, api_key)
                                                 
-                                                st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
-                                                st.success(f"""
-**📌 الفرضية:**
-{u_hypo}
-
-**📊 القرار الإحصائي:**
-{decision_text}
-
-**🧠 التحليل الأكاديمي التفصيلي:**
-{ai_explanation}
-                                                """)
+                                                # 👇 السر هنا: حفظ كل المخرجات في ذاكرة الجلسة 👇
+                                                if 'hypo_outputs' not in st.session_state:
+                                                    st.session_state['hypo_outputs'] = {}
+                                                    
+                                                st.session_state['hypo_outputs'][i] = {
+                                                    'df': final_res,
+                                                    'fig': fig,
+                                                    'decision_text': decision_text,
+                                                    'ai_explanation': ai_explanation
+                                                }
                                                 
+                                                # تحديث سجل الفرضيات للتبويب الخامس
                                                 found = False
                                                 for item in st.session_state['hypothesis_history']:
                                                     if item.get('id') == i:
@@ -936,11 +924,23 @@ if uploaded_file is not None:
                                                 if not found:
                                                     st.session_state['hypothesis_history'].append({'id': i, 'text': u_hypo, 'result': decision_val})
                                                     
-                                                st.info("✅ تم حفظ النتيجة والمخطط لتظهر في التقرير النهائي.")
-                                                
                                             except Exception as e:
-                                                st.error(f"حدث خطأ أثناء التنفيذ أو التوليد: {e}")
-# ==========================================
+                                                st.error(f"حدث خطأ أثناء التنفيذ: {e}")
+
+                                # 👇 العرض الدائم: قراءة المخرجات من الذاكرة وعرضها (حتى لو ضغطت أزرار أخرى) 👇
+                                if 'hypo_outputs' in st.session_state and i in st.session_state['hypo_outputs']:
+                                    out = st.session_state['hypo_outputs'][i]
+                                    col1, col2 = st.columns([1, 1])
+                                    with col1:
+                                        st.markdown("**النتائج الإحصائية:**")
+                                        st.dataframe(out['df'])
+                                    with col2:
+                                        st.markdown(f"**المخطط البياني:**")
+                                        st.plotly_chart(out['fig'], use_container_width=True)
+
+                                    st.markdown("### 📝 مناقشة النتائج (الفصل الرابع - جاهز للنسخ):")
+                                    st.success(f"**📌 الفرضية:**\n{u_hypo}\n\n**📊 القرار الإحصائي:**\n{out['decision_text']}\n\n**🧠 التحليل الأكاديمي التفصيلي:**\n{out['ai_explanation']}")
+            # ==========================================
             # 5. التبويب الثامن: النتائج (الصياغة الأكاديمية النهائية) ✅
             # ==========================================
             with tab5:
