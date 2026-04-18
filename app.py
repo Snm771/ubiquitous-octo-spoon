@@ -504,78 +504,73 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة الأبعاد أو المتغيرات من القائمة الجانبية للبدء.")
         else:
-        # ==========================================
-        # 📥 ميزة التصدير الشامل لملف Word (نصوص + مخططات)
-        # ==========================================
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("📥 استخراج التقرير النهائي")
-        
-        if st.sidebar.button("📄 توليد وتحميل ملف Word الشامل"):
-            with st.spinner("جاري تجميع النتائج، ورسم المخططات، وتجهيز ملف Word..."):
-                try:
-                    doc = Document()
-                    doc.add_heading('تقرير التحليل الإحصائي (SmartStat Pro)', 0)
+            # ==========================================
+            # 📥 ميزة التصدير الشامل لملف Word (نصوص + مخططات)
+            # ==========================================
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("📥 استخراج التقرير النهائي")
+            
+            if st.sidebar.button("📄 توليد وتحميل ملف Word الشامل"):
+                with st.spinner("جاري تجميع النتائج، ورسم المخططات، وتجهيز ملف Word..."):
+                    try:
+                        doc = Document()
+                        doc.add_heading('تقرير التحليل الإحصائي (SmartStat Pro)', 0)
 
-                    # 1. عينة الدراسة
-                    doc.add_heading('أولاً: وصف عينة الدراسة', level=1)
-                    if st.session_state.get('sample_results'):
-                        for res in st.session_state['sample_results']:
-                            doc.add_paragraph(res)
-                    else:
-                        doc.add_paragraph("لم يتم تحليل عينة الدراسة بعد.")
+                        # 1. عينة الدراسة
+                        doc.add_heading('أولاً: وصف عينة الدراسة', level=1)
+                        if st.session_state.get('sample_results'):
+                            for res in st.session_state['sample_results']:
+                                doc.add_paragraph(res)
+                        else:
+                            doc.add_paragraph("لم يتم تحليل عينة الدراسة بعد.")
 
-                    # 2. الثبات
-                    doc.add_heading('ثانياً: ثبات أداة الدراسة', level=1)
-                    if st.session_state.get('reliability_result'):
-                        doc.add_paragraph(st.session_state['reliability_result'])
-                    else:
-                        doc.add_paragraph("لم يتم حساب الثبات بعد.")
+                        # 2. الثبات
+                        doc.add_heading('ثانياً: ثبات أداة الدراسة', level=1)
+                        if st.session_state.get('reliability_result'):
+                            doc.add_paragraph(st.session_state['reliability_result'])
+                        else:
+                            doc.add_paragraph("لم يتم حساب الثبات بعد.")
 
-                    # 3. الفرضيات والمخططات
-                    doc.add_heading('ثالثاً: نتائج اختبار الفرضيات والمخططات البيانية', level=1)
-                    if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
-                        for idx, out in st.session_state['hypo_outputs'].items():
-                            doc.add_heading(f'الفرضية رقم ({idx})', level=2)
-                            
-                            # القرار والشرح
-                            doc.add_paragraph(f"القرار الإحصائي: {out['decision_text']}")
-                            doc.add_paragraph(out['ai_explanation'])
-                            
-                            # إدراج المخطط البياني كصورة في الوورد!
-                            try:
-                                # تحويل الرسمة إلى صورة png
-                                img_bytes = out['fig'].to_image(format="png")
-                                img_stream = io.BytesIO(img_bytes)
-                                doc.add_picture(img_stream, width=Inches(5.5)) # عرض الصورة 5.5 إنش ليتناسب مع الوورد
-                            except Exception as img_e:
-                                doc.add_paragraph(f"[تعذر إدراج المخطط - يرجى التأكد من تثبيت مكتبة kaleido]")
-                    else:
-                        doc.add_paragraph("لم يتم تنفيذ اختبار الفرضيات بعد.")
+                        # 3. الفرضيات والمخططات
+                        doc.add_heading('ثالثاً: نتائج اختبار الفرضيات والمخططات البيانية', level=1)
+                        if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
+                            for idx, out in st.session_state['hypo_outputs'].items():
+                                doc.add_heading(f'الفرضية رقم ({idx})', level=2)
+                                doc.add_paragraph(f"القرار الإحصائي: {out['decision_text']}")
+                                doc.add_paragraph(out['ai_explanation'])
+                                
+                                # إدراج المخطط البياني
+                                try:
+                                    img_bytes = out['fig'].to_image(format="png")
+                                    img_stream = io.BytesIO(img_bytes)
+                                    doc.add_picture(img_stream, width=Inches(5.5))
+                                except:
+                                    doc.add_paragraph("[المخطط متاح في التطبيق التفاعلي]")
+                        else:
+                            doc.add_paragraph("لم يتم تنفيذ اختبار الفرضيات بعد.")
 
-                    # 4. التوصيات
-                    doc.add_heading('رابعاً: التوصيات', level=1)
-                    if st.session_state.get('dim_recs'):
-                        for idx, rec in enumerate(st.session_state['dim_recs'], 1):
-                            doc.add_paragraph(f"{idx}. {rec['rec']}")
-                            # إذا كان هناك شرح معمق للتوصية
-                            if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
-                                doc.add_paragraph(st.session_state['ai_recs_explanations'][f"rec_{idx}"])
+                        # 4. التوصيات
+                        doc.add_heading('رابعاً: التوصيات', level=1)
+                        if st.session_state.get('dim_recs'):
+                            for idx, rec in enumerate(st.session_state['dim_recs'], 1):
+                                doc.add_paragraph(f"{idx}. {rec['rec']}")
+                                if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
+                                    doc.add_paragraph(st.session_state['ai_recs_explanations'][f"rec_{idx}"])
 
-                    # حفظ الملف في الذاكرة المؤقتة لكي يحمله المستخدم
-                    target_stream = io.BytesIO()
-                    doc.save(target_stream)
-                    target_stream.seek(0)
+                        # حفظ وتحميل
+                        target_stream = io.BytesIO()
+                        doc.save(target_stream)
+                        target_stream.seek(0)
 
-                    st.sidebar.success("✅ تم تجهيز الملف بنجاح!")
-                    st.sidebar.download_button(
-                        label="⬇️ اضغط هنا لتحميل ملف Word",
-                        data=target_stream,
-                        file_name="Statistical_Report_Final.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-
-                except Exception as e:
-                    st.sidebar.error(f"حدث خطأ أثناء إنشاء الملف: {e}")
+                        st.sidebar.success("✅ تم تجهيز الملف!")
+                        st.sidebar.download_button(
+                            label="⬇️ اضغط هنا لتحميل ملف Word",
+                            data=target_stream,
+                            file_name="Statistical_Report_Sohaib.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                    except Exception as e:
+                        st.sidebar.error(f"خطأ في إنشاء الملف: {e}")
                     
             # التبويبات الثمانية
            # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
