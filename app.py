@@ -504,69 +504,128 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة الأبعاد أو المتغيرات من القائمة الجانبية للبدء.")
         else:
+        
             # ==========================================
-            # 📥 ميزة التصدير الشامل لملف Word (نصوص + مخططات)
+            # 📥 ميزة التصدير الشامل لملف Word (نصوص + جداول + مخططات)
             # ==========================================
             st.sidebar.markdown("---")
             st.sidebar.subheader("📥 استخراج التقرير النهائي")
             
-            if st.sidebar.button("📄 توليد وتحميل ملف Word الشامل"):
-                with st.spinner("جاري تجميع النتائج، ورسم المخططات، وتجهيز ملف Word..."):
+            if st.sidebar.button("📄 توليد وتحميل التقرير (Word)"):
+                with st.spinner("جاري تجميع النتائج، رسم الجداول والمخططات، وتنسيق الملف الأكاديمي..."):
                     try:
+                        import io
+                        import re
+                        from docx import Document
+                        from docx.shared import Inches, Pt
+                        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
                         doc = Document()
-                        doc.add_heading('تقرير التحليل الإحصائي (SmartStat Pro)', 0)
+                        
+                        # 🔹 دالة مساعدة 1: تنظيف النصوص والمحاذاة لليمين (للعربي)
+                        def add_rtl_text(doc, text, is_heading=False, level=1):
+                            # تنظيف رموز الماركدوان المزعجة (النجمات والهاشتاقات)
+                            clean_text = re.sub(r'\*+', '', text)
+                            clean_text = clean_text.replace('#', '').strip()
+                            if not clean_text: return
+                            
+                            if is_heading:
+                                p = doc.add_heading(clean_text, level=level)
+                            else:
+                                p = doc.add_paragraph(clean_text)
+                            
+                            # محاذاة النص لليمين ليناسب اللغة العربية
+                            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+                        # 🔹 دالة مساعدة 2: رسم جداول احترافية داخل الوورد
+                        def add_dataframe_table(doc, df):
+                            table = doc.add_table(rows=df.shape[0]+1, cols=df.shape[1])
+                            table.style = 'Table Grid'
+                            
+                            # تعبئة عناوين الأعمدة
+                            for j, col in enumerate(df.columns):
+                                cell = table.cell(0, j)
+                                cell.text = str(col)
+                                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                                
+                            # تعبئة البيانات
+                            for i in range(df.shape[0]):
+                                for j in range(df.shape[1]):
+                                    val = df.iat[i, j]
+                                    cell = table.cell(i+1, j)
+                                    # تقريب الأرقام لـ 3 فواصل عشرية فقط للمظهر الأكاديمي
+                                    cell.text = f"{val:.3f}" if isinstance(val, float) else str(val)
+                                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            
+                            doc.add_paragraph("") # مسافة صغيرة بعد الجدول لترتيب الصفحة
+
+                        # --- بداية كتابة المستند ---
+                        add_rtl_text(doc, 'تقرير التحليل الإحصائي (SmartStat Pro)', True, 0)
 
                         # 1. عينة الدراسة
-                        doc.add_heading('أولاً: وصف عينة الدراسة', level=1)
+                        add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
                         if st.session_state.get('sample_results'):
                             for res in st.session_state['sample_results']:
-                                doc.add_paragraph(res)
+                                add_rtl_text(doc, res)
                         else:
-                            doc.add_paragraph("لم يتم تحليل عينة الدراسة بعد.")
+                            add_rtl_text(doc, "لم يتم تحليل عينة الدراسة بعد.")
 
                         # 2. الثبات
-                        doc.add_heading('ثانياً: ثبات أداة الدراسة', level=1)
+                        add_rtl_text(doc, 'ثانياً: ثبات أداة الدراسة', True, 1)
                         if st.session_state.get('reliability_result'):
-                            doc.add_paragraph(st.session_state['reliability_result'])
+                            add_rtl_text(doc, st.session_state['reliability_result'])
                         else:
-                            doc.add_paragraph("لم يتم حساب الثبات بعد.")
+                            add_rtl_text(doc, "لم يتم حساب الثبات بعد.")
 
-                        # 3. الفرضيات والمخططات
-                        doc.add_heading('ثالثاً: نتائج اختبار الفرضيات والمخططات البيانية', level=1)
+                        # 3. الفرضيات، الجداول، والمخططات
+                        add_rtl_text(doc, 'ثالثاً: نتائج اختبار الفرضيات', True, 1)
                         if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
                             for idx, out in st.session_state['hypo_outputs'].items():
-                                doc.add_heading(f'الفرضية رقم ({idx})', level=2)
-                                doc.add_paragraph(f"القرار الإحصائي: {out['decision_text']}")
-                                doc.add_paragraph(out['ai_explanation'])
+                                add_rtl_text(doc, f'الفرضية رقم ({idx})', True, 2)
                                 
-                                # إدراج المخطط البياني
+                                # أ. إدراج الجدول الإحصائي
+                                add_rtl_text(doc, "الجدول الإحصائي للنتيجة:")
+                                add_dataframe_table(doc, out['df'])
+                                
+                                # ب. القرار والشرح الأكاديمي
+                                add_rtl_text(doc, f"القرار الإحصائي: {out['decision_text']}")
+                                
+                                # تقسيم الشرح المعمق إلى فقرات ليكون مرتباً
+                                explanation_lines = out['ai_explanation'].split('\n')
+                                for line in explanation_lines:
+                                    add_rtl_text(doc, line)
+                                
+                                # ج. إدراج المخطط البياني كصورة
                                 try:
                                     img_bytes = out['fig'].to_image(format="png")
                                     img_stream = io.BytesIO(img_bytes)
                                     doc.add_picture(img_stream, width=Inches(5.5))
-                                except:
-                                    doc.add_paragraph("[المخطط متاح في التطبيق التفاعلي]")
+                                    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER # توسيط الصورة
+                                except Exception as e:
+                                    add_rtl_text(doc, "[تعذر إدراج المخطط البياني. تأكد من تثبيت مكتبة kaleido]")
                         else:
-                            doc.add_paragraph("لم يتم تنفيذ اختبار الفرضيات بعد.")
+                            add_rtl_text(doc, "لم يتم تنفيذ اختبار الفرضيات بعد.")
 
                         # 4. التوصيات
-                        doc.add_heading('رابعاً: التوصيات', level=1)
+                        add_rtl_text(doc, 'رابعاً: التوصيات', True, 1)
                         if st.session_state.get('dim_recs'):
                             for idx, rec in enumerate(st.session_state['dim_recs'], 1):
-                                doc.add_paragraph(f"{idx}. {rec['rec']}")
+                                add_rtl_text(doc, f"{idx}. {rec['rec']}")
                                 if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
-                                    doc.add_paragraph(st.session_state['ai_recs_explanations'][f"rec_{idx}"])
+                                    expl_lines = st.session_state['ai_recs_explanations'][f"rec_{idx}"].split('\n')
+                                    for line in expl_lines:
+                                        add_rtl_text(doc, line)
 
-                        # حفظ وتحميل
+                        # حفظ وتحميل الملف
                         target_stream = io.BytesIO()
                         doc.save(target_stream)
                         target_stream.seek(0)
 
-                        st.sidebar.success("✅ تم تجهيز الملف!")
+                        st.sidebar.success("✅ تم تجهيز التقرير الأكاديمي!")
                         st.sidebar.download_button(
-                            label="⬇️ اضغط هنا لتحميل ملف Word",
+                            label="⬇️ تحميل تقرير (Word) الأكاديمي",
                             data=target_stream,
-                            file_name="Statistical_Report_Sohaib.docx",
+                            file_name="Master_Thesis_Statistical_Report.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         )
                     except Exception as e:
