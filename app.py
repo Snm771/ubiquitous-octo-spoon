@@ -410,7 +410,7 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        st.sidebar.title("⚙️ البناء الهيكلي للدراسة")
+        st.sidebar.title("⚙️ بناء هيكل الدراسة (البحث الحالي)")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
@@ -437,18 +437,27 @@ if uploaded_file is not None:
             # 👇 خانة لتعديل اسم المتغير الرئيسي
             custom_construct_name = st.sidebar.text_input(f"📌 اسم {default_construct}:", value=default_construct, key=f"c_name_{idx_c}")
             
+            # 👇 الميزة الجديدة: أسئلة مباشرة للمتغير (في حال لم يكن له أبعاد)
+            direct_construct_cols = st.sidebar.multiselect(f"أسئلة ({custom_construct_name}) المباشرة:", all_questions, default=[], key=f"direct_cols_{idx_c}")
+            
             construct_cols = []
             
+            # إذا اختار الباحث أسئلة مباشرة للمتغير، نضيفها لرصيده
+            if direct_construct_cols:
+                construct_cols.extend(direct_construct_cols)
+                active_questions.extend(direct_construct_cols)
+                available_questions = [q for q in available_questions if q not in direct_construct_cols]
+
             st.sidebar.markdown(f'<div class="sub-dimension-container">', unsafe_allow_html=True)
             for idx_d, default_dim in enumerate(default_dims):
                 # 👇 خانة لتعديل اسم البعد الفرعي
                 custom_dim_name = st.sidebar.text_input(f"اسم {default_dim} (لـ {custom_construct_name}):", value=default_dim, key=f"d_name_{idx_c}_{idx_d}")
                 
-                # التوزيع التلقائي الذكي للأسئلة
+                # التوزيع التلقائي الذكي للأسئلة المتبقية
                 chunk_size = max(1, len(available_questions) // total_dims) if available_questions and total_dims > 0 else 0
                 default_cols = available_questions[:chunk_size] if available_questions else []
                 
-                # إنشاء اسم فريد برمجياً لمنع التداخل (بناءً على الأسماء المخصصة)
+                # إنشاء اسم فريد برمجياً لمنع التداخل
                 unique_dim_label = f"{custom_construct_name} - {custom_dim_name}"
                 
                 # عرض قائمة الأسئلة للبعد
@@ -468,10 +477,10 @@ if uploaded_file is not None:
             st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
             if construct_cols:
-                # حفظ وحساب المتغير الرئيسي بالاسم المخصص الذي أدخله الباحث
+                # حفظ وحساب المتغير الرئيسي بالاسم المخصص (سواء كانت الأسئلة مباشرة أو من الأبعاد)
                 construct_cols = list(dict.fromkeys(construct_cols))
                 constructs_dict[custom_construct_name] = construct_cols
-                df_encoded[custom_construct_name] = df_encoded[construct_cols].mean(axis=1)
+                df_encoded[custom_construct_name] = df_encoded[construct_cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
                 
                 # إضافة المتغير المخصص كخيار للتحليل
                 analysis_cols.append(custom_construct_name)
@@ -485,7 +494,7 @@ if uploaded_file is not None:
             analysis_cols.append('الاستبيان ككل (المتوسط العام)')
 
         if not analysis_cols:
-            st.warning("يرجى تحديد أسئلة الأبعاد من القائمة الجانبية للبدء.")
+            st.warning("يرجى تحديد أسئلة الأبعاد أو المتغيرات من القائمة الجانبية للبدء.")
         else:
             # التبويبات الثمانية
            # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
