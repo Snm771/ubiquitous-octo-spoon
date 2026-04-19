@@ -418,13 +418,175 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        st.sidebar.title("⚙️ بناء هيكل الدراسة (البحث الحالي)")
-        st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
-        
         categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
         all_questions = [c for c in num_cols_auto if c not in categorical_cols]
         
-        # 🌟 الهيكل الأساسي (جاهز للتخصيص من قبل الباحث) 🌟
+        # 👇=== التعديل الأول: رفع زر الوورد لأعلى القائمة الجانبية (VIP) ===👇
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📥 استخراج التقرير النهائي")
+        # جعلنا الزر بلون مميز ليلفت الانتباه
+        if st.sidebar.button("📄 توليد وتحميل التقرير (Word)", type="primary"):
+            with st.spinner("جاري تجميع النتائج، رسم الجداول والمخططات، وتنسيق الملف الأكاديمي..."):
+                try:
+                    import io
+                    import re
+                    from docx import Document
+                    from docx.shared import Inches, Pt
+                    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+                    doc = Document()
+                    
+                    def add_rtl_text(doc, text, is_heading=False, level=1):
+                        clean_text = re.sub(r'\*+', '', text)
+                        clean_text = clean_text.replace('#', '').strip()
+                        if not clean_text: return
+                        p = doc.add_heading(clean_text, level=level) if is_heading else doc.add_paragraph(clean_text)
+                        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+                    def add_dataframe_table(doc, df):
+                        table = doc.add_table(rows=df.shape[0]+1, cols=df.shape[1])
+                        table.style = 'Table Grid'
+                        for j, col in enumerate(df.columns):
+                            cell = table.cell(0, j)
+                            cell.text = str(col)
+                            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        for i in range(df.shape[0]):
+                            for j in range(df.shape[1]):
+                                val = df.iat[i, j]
+                                cell = table.cell(i+1, j)
+                                cell.text = f"{val:.3f}" if isinstance(val, float) else str(val)
+                                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        doc.add_paragraph("")
+
+                    def add_plotly_fig(doc, fig):
+                        try:
+                            # كود الألوان الذي أصلحناه للأعمدة
+                            fig.update_layout(template="plotly_white", paper_bgcolor="white", plot_bgcolor="white", font=dict(color="black"))
+                            colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf']
+                            for i, trace in enumerate(fig.data):
+                                if trace.type == 'bar':
+                                    trace.marker.color = colors[i % len(colors)]
+                                    trace.marker.line.width = 0
+                            
+                            img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
+                            img_stream = io.BytesIO(img_bytes)
+                            doc.add_picture(img_stream, width=Inches(5.5))
+                            doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        except Exception as e:
+                            add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
+
+                    # 1️⃣ عينة الدراسة
+                    add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
+                    if 'sample_dfs' in st.session_state and st.session_state['sample_dfs']:
+                        for col_name, df_data in st.session_state['sample_dfs'].items():
+                            add_rtl_text(doc, f"جدول وتوزيع العينة حسب ({col_name}):", True, 2)
+                            df_print = df_data.copy()
+                            df_print.insert(0, 'الفئة', df_print.index)
+                            add_dataframe_table(doc, df_print)
+                            if 'sample_figs' in st.session_state and col_name in st.session_state['sample_figs']:
+                                add_plotly_fig(doc, st.session_state['sample_figs'][col_name])
+                            for res in st.session_state.get('sample_results', []):
+                                if f"({col_name})" in res:
+                                    add_rtl_text(doc, res)
+                            if 'demo_ai_explanations' in st.session_state and col_name in st.session_state['demo_ai_explanations']:
+                                ai_expl = st.session_state['demo_ai_explanations'][col_name]
+                                for line in ai_expl.split('\n'):
+                                    add_rtl_text(doc, line)
+                    else:
+                        add_rtl_text(doc, "يرجى زيارة تبويب عينة الدراسة أولاً لتهيئة الجداول.")
+
+                    # 2️⃣ الإحصاء الوصفي
+                    add_rtl_text(doc, 'ثانياً: الإحصاء الوصفي لمتغيرات الدراسة', True, 1)
+                    if 'desc_df_memory' in st.session_state:
+                        add_rtl_text(doc, "جدول المتوسطات والانحرافات المعيارية:")
+                        add_dataframe_table(doc, st.session_state['desc_df_memory'])
+                        add_rtl_text(doc, "يوضح الجدول أعلاه الاتجاه العام لإجابات المبحوثين وتشتتها حول المتوسط.")
+                    else:
+                        add_rtl_text(doc, "يرجى زيارة تبويب الإحصاء الوصفي أولاً.")
+
+                    # 3️⃣ الثبات
+                    add_rtl_text(doc, 'ثالثاً: ثبات أداة الدراسة', True, 1)
+                    if 'alpha_df_memory' in st.session_state:
+                        add_dataframe_table(doc, st.session_state['alpha_df_memory'])
+                    if st.session_state.get('reliability_result'):
+                        add_rtl_text(doc, st.session_state['reliability_result'])
+                    else:
+                        add_rtl_text(doc, "يرجى زيارة تبويب الثبات أولاً.")
+
+                    # 4️⃣ الفرضيات 
+                    add_rtl_text(doc, 'رابعاً: نتائج اختبار الفرضيات', True, 1)
+                    if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
+                        for idx, out in st.session_state['hypo_outputs'].items():
+                            add_rtl_text(doc, f'الفرضية رقم ({idx})', True, 2)
+                            add_rtl_text(doc, "الجدول الإحصائي للنتيجة:")
+                            add_dataframe_table(doc, out['df'])
+                            add_plotly_fig(doc, out['fig'])
+                            add_rtl_text(doc, f"القرار الإحصائي: {out['decision_text']}")
+                            for line in out['ai_explanation'].split('\n'):
+                                add_rtl_text(doc, line)
+                    else:
+                        add_rtl_text(doc, "لم يتم اختبار أي فرضية بعد.")
+
+                    # 5️⃣ أبرز النتائج
+                    add_rtl_text(doc, 'خامساً: أبرز نتائج الدراسة', True, 1)
+                    add_rtl_text(doc, "من خلال المعطيات السابقة وردود المبحوثين على محاور الدراسة تم الخروج بالنتائج التالية:")
+                    if st.session_state.get('reliability_result'):
+                        add_rtl_text(doc, st.session_state['reliability_result'])
+                    if 'sample_dfs' in st.session_state and st.session_state['sample_dfs']:
+                        summary_parts = []
+                        for col_name, df_data in st.session_state['sample_dfs'].items():
+                            if 'التكرار' in df_data.columns:
+                                top = df_data['التكرار'].drop('📊 المجموع الكلي ✓', errors='ignore').idxmax()
+                                summary_parts.append(f"{col_name} ({top})")
+                        if summary_parts:
+                            joined = "، ".join(summary_parts)
+                            add_rtl_text(doc, f" استنادًا إلى نتائج البيانات الشخصية للمبحوثين اتضح أن غالبية أفراد العينة تتمثل في: {joined}، مما يعكس خصائص مجتمع الدراسة ويسهم في دعم دقة تفسير النتائج.")
+                    if st.session_state.get('hypothesis_history'):
+                        res_idx = 1
+                        for h in st.session_state['hypothesis_history']:
+                            is_accepted = h['result'] == "accepted"
+                            decision = "تقبل" if is_accepted else "ترفض"
+                            relation = "وجود أثر أو علاقة ذات دلالة إحصائية" if is_accepted else "عدم وجود أثر أو علاقة ذات دلالة إحصائية"
+                            proof = "ثبت معنوياً وإحصائياً" if is_accepted else "لم يثبت إحصائياً"
+                            add_rtl_text(doc, f" الفرضية ({res_idx}): ({h['text']})")
+                            add_rtl_text(doc, f"تشير نتائج التحليل الإحصائي إلى {relation} بين المتغيرات. وبناءً على ذلك، فإن الفرضية المذكورة ({decision}).")
+                            if 'deep_explanations' in st.session_state and f"hypo_{res_idx}" in st.session_state['deep_explanations']:
+                                for line in st.session_state['deep_explanations'][f"hypo_{res_idx}"].split('\n'):
+                                    add_rtl_text(doc, line)
+                            else:
+                                add_rtl_text(doc, f"ويعكس هذا المسار {'توافقاً' if is_accepted else 'اختلافاً'} مع الإطار النظري المفترض للدراسة.")
+                            res_idx += 1
+
+                    # 6️⃣ التوصيات 
+                    add_rtl_text(doc, 'سادساً: التوصيات والإجراءات المقترحة', True, 1)
+                    if st.session_state.get('dim_recs'):
+                        for idx, rec in enumerate(st.session_state['dim_recs'], 1):
+                            add_rtl_text(doc, f"{idx}. التوصية: {rec['rec']}")
+                            if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
+                                for line in st.session_state['ai_recs_explanations'][f"rec_{idx}"].split('\n'):
+                                    add_rtl_text(doc, line)
+
+                    # الحفظ والتصدير
+                    target_stream = io.BytesIO()
+                    doc.save(target_stream)
+                    target_stream.seek(0)
+
+                    st.sidebar.success("✅ تم تجهيز التقرير الملكي بنجاح!")
+                    st.sidebar.download_button(
+                        label="⬇️ تحميل تقرير (Word) الأكاديمي الشامل",
+                        data=target_stream,
+                        file_name="Master_Thesis_Full_Report.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                except Exception as e:
+                    st.sidebar.error(f"خطأ في إنشاء الملف: {e}")
+        st.sidebar.markdown("---")
+        # 👆===================================================================👆
+
+        st.sidebar.title("⚙️ بناء هيكل الدراسة (البحث)")
+        st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
+        
+        # 🌟 الهيكل الأساسي
         base_model = {
             "المتغير المستقل": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"],
             "المتغير التابع": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"],
@@ -435,64 +597,56 @@ if uploaded_file is not None:
         analysis_cols = []
         active_questions = []
         constructs_dict = {}
-        
         available_questions = all_questions.copy()
-        total_dims = 18 # إجمالي الأبعاد الافتراضية
+        total_dims = 18
 
-        # بناء القائمة الجانبية بخانات نصية لتخصيص الأسماء
+        # 👇=== التعديل الثاني: تحويل الزحمة إلى قوائم مطوية (Expanders) مريحة للعين ===👇
         for idx_c, (default_construct, default_dims) in enumerate(base_model.items()):
-            st.sidebar.markdown(f"---")
-            # 👇 خانة لتعديل اسم المتغير الرئيسي
-            custom_construct_name = st.sidebar.text_input(f"📌 اسم {default_construct}:", value=default_construct, key=f"c_name_{idx_c}")
             
-            # 👇 الميزة الجديدة: أسئلة مباشرة للمتغير (في حال لم يكن له أبعاد)
-            direct_construct_cols = st.sidebar.multiselect(f"أسئلة ({custom_construct_name}) المباشرة:", all_questions, default=[], key=f"direct_cols_{idx_c}")
+            # نجعل أول قسم (المستقل) مفتوحاً دائماً، والباقي مغلق لترتيب شكل القائمة
+            is_open = True if idx_c == 0 else False
             
-            construct_cols = []
+            with st.sidebar.expander(f"📁 إعدادات ({default_construct})", expanded=is_open):
+                custom_construct_name = st.text_input(f"📌 الاسم:", value=default_construct, key=f"c_name_{idx_c}")
+                direct_construct_cols = st.multiselect(f"أسئلة مباشرة (بدون أبعاد):", all_questions, default=[], key=f"direct_cols_{idx_c}")
             
-            # إذا اختار الباحث أسئلة مباشرة للمتغير، نضيفها لرصيده
-            if direct_construct_cols:
-                construct_cols.extend(direct_construct_cols)
-                active_questions.extend(direct_construct_cols)
-                available_questions = [q for q in available_questions if q not in direct_construct_cols]
+                construct_cols = []
+                
+                if direct_construct_cols:
+                    construct_cols.extend(direct_construct_cols)
+                    active_questions.extend(direct_construct_cols)
+                    available_questions = [q for q in available_questions if q not in direct_construct_cols]
 
-            st.sidebar.markdown(f'<div class="sub-dimension-container">', unsafe_allow_html=True)
-            for idx_d, default_dim in enumerate(default_dims):
-                # 👇 خانة لتعديل اسم البعد الفرعي
-                custom_dim_name = st.sidebar.text_input(f"اسم {default_dim} (لـ {custom_construct_name}):", value=default_dim, key=f"d_name_{idx_c}_{idx_d}")
-                
-                # التوزيع التلقائي الذكي للأسئلة المتبقية
-                chunk_size = max(1, len(available_questions) // total_dims) if available_questions and total_dims > 0 else 0
-                default_cols = available_questions[:chunk_size] if available_questions else []
-                
-                # إنشاء اسم فريد برمجياً لمنع التداخل
-                unique_dim_label = f"{custom_construct_name} - {custom_dim_name}"
-                
-                # عرض قائمة الأسئلة للبعد
-                dim_cols = st.sidebar.multiselect(f"أسئلة ({custom_dim_name}):", all_questions, default=default_cols, key=f"key_{unique_dim_label}")
-                
-                if dim_cols:
-                    dimensions_dict[unique_dim_label] = dim_cols
-                    construct_cols.extend(dim_cols)
+                st.markdown("<hr style='margin: 5px 0; border-top: 1px dotted rgba(212, 175, 55, 0.5);'>", unsafe_allow_html=True)
+                st.markdown(f"**أبعاد المتغير (إن وجدت):**")
+
+                for idx_d, default_dim in enumerate(default_dims):
+                    custom_dim_name = st.text_input(f"اسم {default_dim}:", value=default_dim, key=f"d_name_{idx_c}_{idx_d}")
                     
-                    df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
-                    df_encoded[unique_dim_label] = df_encoded[dim_cols].mean(axis=1)
-                    analysis_cols.append(unique_dim_label)
-                    active_questions.extend(dim_cols)
+                    chunk_size = max(1, len(available_questions) // total_dims) if available_questions and total_dims > 0 else 0
+                    default_cols = available_questions[:chunk_size] if available_questions else []
+                   
+                    unique_dim_label = f"{custom_construct_name} - {custom_dim_name}"
                     
-                    available_questions = [q for q in available_questions if q not in dim_cols]
-                total_dims -= 1
-            st.sidebar.markdown('</div>', unsafe_allow_html=True)
+                    dim_cols = st.multiselect(f"أسئلة البعد:", all_questions, default=default_cols, key=f"key_{unique_dim_label}")
+                    
+                    if dim_cols:
+                        dimensions_dict[unique_dim_label] = dim_cols
+                        construct_cols.extend(dim_cols)
+                        
+                        df_encoded[dim_cols] = df_encoded[dim_cols].apply(pd.to_numeric, errors='coerce')
+                        df_encoded[unique_dim_label] = df_encoded[dim_cols].mean(axis=1)
+                        analysis_cols.append(unique_dim_label)
+                        active_questions.extend(dim_cols)
+                       
+                        available_questions = [q for q in available_questions if q not in dim_cols]
+                    total_dims -= 1
 
             if construct_cols:
-                # حفظ وحساب المتغير الرئيسي بالاسم المخصص (سواء كانت الأسئلة مباشرة أو من الأبعاد)
                 construct_cols = list(dict.fromkeys(construct_cols))
                 constructs_dict[custom_construct_name] = construct_cols
                 df_encoded[custom_construct_name] = df_encoded[construct_cols].apply(pd.to_numeric, errors='coerce').mean(axis=1)
-                
-                # إضافة المتغير المخصص كخيار للتحليل
                 analysis_cols.append(custom_construct_name)
-                # إضافة المتغير المخصص لاختبارات الثبات
                 dimensions_dict[custom_construct_name] = construct_cols 
 
         active_questions = list(dict.fromkeys(active_questions))
@@ -504,193 +658,7 @@ if uploaded_file is not None:
         if not analysis_cols:
             st.warning("يرجى تحديد أسئلة الأبعاد أو المتغيرات من القائمة الجانبية للبدء.")
         else:
-        
-            # ==========================================
-            # 📥 ميزة التصدير الشامل لملف Word (النسخة الملكية الكاملة)
-            # ==========================================
-            st.sidebar.markdown("---")
-            st.sidebar.subheader("📥 استخراج التقرير النهائي")
-            
-            if st.sidebar.button("📄 توليد وتحميل التقرير (Word)"):
-                with st.spinner("جاري تجميع النتائج، رسم الجداول والمخططات، وتنسيق الملف الأكاديمي..."):
-                    try:
-                        import io
-                        import re
-                        from docx import Document
-                        from docx.shared import Inches, Pt
-                        from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-                        doc = Document()
-                        
-                        # 🔹 دوال المساعدة للوورد
-                        def add_rtl_text(doc, text, is_heading=False, level=1):
-                            clean_text = re.sub(r'\*+', '', text)
-                            clean_text = clean_text.replace('#', '').strip()
-                            if not clean_text: return
-                            p = doc.add_heading(clean_text, level=level) if is_heading else doc.add_paragraph(clean_text)
-                            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-
-                        def add_dataframe_table(doc, df):
-                            table = doc.add_table(rows=df.shape[0]+1, cols=df.shape[1])
-                            table.style = 'Table Grid'
-                            for j, col in enumerate(df.columns):
-                                cell = table.cell(0, j)
-                                cell.text = str(col)
-                                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            for i in range(df.shape[0]):
-                                for j in range(df.shape[1]):
-                                    val = df.iat[i, j]
-                                    cell = table.cell(i+1, j)
-                                    cell.text = f"{val:.3f}" if isinstance(val, float) else str(val)
-                                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            doc.add_paragraph("")
-
-                        def add_plotly_fig(doc, fig):
-                            try:
-                                # 1. تنظيف الخلفية وجعلها بيضاء ناصعة
-                                fig.update_layout(
-                                    template="plotly_white",
-                                    paper_bgcolor="white",
-                                    plot_bgcolor="white",
-                                    font=dict(color="black")
-                                )
-                                
-                                # 2. الحل الجذري: صبغ الأعمدة بالقوة الجبرية بألوان زاهية
-                                colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf']
-                                for i, trace in enumerate(fig.data):
-                                    if trace.type == 'bar':
-                                        trace.marker.color = colors[i % len(colors)] # إعطاء كل عمود لون مختلف
-                                        trace.marker.line.width = 0 # مسح أي إطار أسود
-                                
-                                # 3. التقاط الصورة وإدراجها
-                                img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
-                                img_stream = io.BytesIO(img_bytes)
-                                doc.add_picture(img_stream, width=Inches(5.5))
-                                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            except Exception as e:
-                                add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
-                        # 1️⃣ عينة الدراسة
-                        add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
-                        if 'sample_dfs' in st.session_state:
-                            for col_name, df_data in st.session_state['sample_dfs'].items():
-                                add_rtl_text(doc, f"جدول وتوزيع العينة حسب ({col_name}):", True, 2)
-                                # الجدول
-                                df_print = df_data.copy()
-                                df_print.insert(0, 'الفئة', df_print.index)
-                                add_dataframe_table(doc, df_print)
-                                # المخطط البياني للعينة
-                                if 'sample_figs' in st.session_state and col_name in st.session_state['sample_figs']:
-                                    add_plotly_fig(doc, st.session_state['sample_figs'][col_name])
-                                # الشرح النصي الخاص بالمتغير
-                                for res in st.session_state.get('sample_results', []):
-                                    if f"({col_name})" in res:
-                                        add_rtl_text(doc, res)
-                        else:
-                            add_rtl_text(doc, "يرجى زيارة تبويب عينة الدراسة أولاً.")
-
-                        # 2️⃣ الإحصاء الوصفي (الجديد)
-                        add_rtl_text(doc, 'ثانياً: الإحصاء الوصفي لمتغيرات الدراسة', True, 1)
-                        if 'desc_df_memory' in st.session_state:
-                            add_rtl_text(doc, "جدول المتوسطات والانحرافات المعيارية:")
-                            add_dataframe_table(doc, st.session_state['desc_df_memory'])
-                            add_rtl_text(doc, "يوضح الجدول أعلاه الاتجاه العام لإجابات المبحوثين وتشتتها حول المتوسط.")
-                        else:
-                            add_rtl_text(doc, "يرجى زيارة تبويب الإحصاء الوصفي أولاً.")
-
-                        # 3️⃣ الثبات
-                        add_rtl_text(doc, 'ثالثاً: ثبات أداة الدراسة', True, 1)
-                        if 'alpha_df_memory' in st.session_state:
-                            add_dataframe_table(doc, st.session_state['alpha_df_memory'])
-                        if st.session_state.get('reliability_result'):
-                            add_rtl_text(doc, st.session_state['reliability_result'])
-                        else:
-                            add_rtl_text(doc, "يرجى زيارة تبويب الثبات أولاً.")
-
-                        # 4️⃣ الفرضيات (التفاصيل والمخططات)
-                        add_rtl_text(doc, 'رابعاً: نتائج اختبار الفرضيات', True, 1)
-                        if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
-                            for idx, out in st.session_state['hypo_outputs'].items():
-                                add_rtl_text(doc, f'الفرضية رقم ({idx})', True, 2)
-                                add_rtl_text(doc, "الجدول الإحصائي للنتيجة:")
-                                add_dataframe_table(doc, out['df'])
-                                add_plotly_fig(doc, out['fig'])
-                                add_rtl_text(doc, f"القرار الإحصائي: {out['decision_text']}")
-                                for line in out['ai_explanation'].split('\n'):
-                                    add_rtl_text(doc, line)
-                        else:
-                            add_rtl_text(doc, "لم يتم اختبار أي فرضية بعد.")
-
-                        # ==========================================
-                        # 5️⃣ أبرز النتائج (الجديد - يسحب بيانات التبويب الخامس)
-                        # ==========================================
-                        add_rtl_text(doc, 'خامساً: أبرز نتائج الدراسة', True, 1)
-                        add_rtl_text(doc, "من خلال المعطيات السابقة وردود المبحوثين على محاور الدراسة تم الخروج بالنتائج التالية:")
-                        
-                        # أ. نتيجة الثبات
-                        if st.session_state.get('reliability_result'):
-                            add_rtl_text(doc, st.session_state['reliability_result'])
-                            
-                        # ب. نتيجة العينة
-                        if 'sample_dfs' in st.session_state and st.session_state['sample_dfs']:
-                            summary_parts = []
-                            for col_name, df_data in st.session_state['sample_dfs'].items():
-                                if 'التكرار' in df_data.columns:
-                                    top = df_data['التكرار'].drop('📊 المجموع الكلي ✓', errors='ignore').idxmax()
-                                    summary_parts.append(f"{col_name} ({top})")
-                            if summary_parts:
-                                joined = "، ".join(summary_parts)
-                                add_rtl_text(doc, f" استنادًا إلى نتائج البيانات الشخصية للمبحوثين اتضح أن غالبية أفراد العينة تتمثل في: {joined}، مما يعكس خصائص مجتمع الدراسة ويسهم في دعم دقة تفسير النتائج.")
-                                
-                        # ج. نتائج الفرضيات المختصرة
-                        if st.session_state.get('hypothesis_history'):
-                            res_idx = 1
-                            for h in st.session_state['hypothesis_history']:
-                                is_accepted = h['result'] == "accepted"
-                                decision = "تقبل" if is_accepted else "ترفض"
-                                relation = "وجود أثر أو علاقة ذات دلالة إحصائية" if is_accepted else "عدم وجود أثر أو علاقة ذات دلالة إحصائية"
-                                proof = "ثبت معنوياً وإحصائياً" if is_accepted else "لم يثبت إحصائياً"
-                                
-                                add_rtl_text(doc, f" الفرضية ({res_idx}): ({h['text']})")
-                                add_rtl_text(doc, f"تشير نتائج التحليل الإحصائي إلى {relation} بين المتغيرات. وبناءً على ذلك، فإن الفرضية المذكورة ({decision}).")
-                                
-                                # إضافة التفسير المعمق إن وُجد
-                                if 'deep_explanations' in st.session_state and f"hypo_{res_idx}" in st.session_state['deep_explanations']:
-                                    for line in st.session_state['deep_explanations'][f"hypo_{res_idx}"].split('\n'):
-                                        add_rtl_text(doc, line)
-                                else:
-                                    add_rtl_text(doc, f"ويعكس هذا المسار {'توافقاً' if is_accepted else 'اختلافاً'} مع الإطار النظري المفترض للدراسة.")
-                                    
-                                res_idx += 1
-
-                        # ==========================================
-                        # 6️⃣ التوصيات (أصبحت القسم السادس)
-                        # ==========================================
-                        add_rtl_text(doc, 'سادساً: التوصيات والإجراءات المقترحة', True, 1)
-                        if st.session_state.get('dim_recs'):
-                            for idx, rec in enumerate(st.session_state['dim_recs'], 1):
-                                add_rtl_text(doc, f"{idx}. التوصية: {rec['rec']}")
-                                if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
-                                    for line in st.session_state['ai_recs_explanations'][f"rec_{idx}"].split('\n'):
-                                        add_rtl_text(doc, line)
-
-                        # الحفظ والتصدير
-                        target_stream = io.BytesIO()
-                        doc.save(target_stream)
-                        target_stream.seek(0)
-
-                        st.sidebar.success("✅ تم تجهيز التقرير الملكي بنجاح!")
-                        st.sidebar.download_button(
-                            label="⬇️ تحميل تقرير (Word) الأكاديمي الشامل",
-                            data=target_stream,
-                            file_name="Master_Thesis_Full_Report.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                    except Exception as e:
-                        st.sidebar.error(f"خطأ في إنشاء الملف: {e}")
-                    
-            # التبويبات الثمانية
-           # تعريف 9 تبويبات (فصل النتائج عن التوصيات)
-           # تعريف 6 تبويبات احترافية (بعد إزالة التبويبات اليدوية القديمة)
+        # 👆========================================================================👆
             tabs_names = [
                 "👥 عينة الدراسة", "📊 الإحصاء الوصفي", "🧪 الثبات (ألفا)", 
                 "🧠 محلل الفرضيات الذكي", "📌 النتائج", "💡 التوصيات"
