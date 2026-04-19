@@ -418,8 +418,7 @@ if uploaded_file is not None:
         df_encoded = encode_likert(df)
         cat_cols_auto, num_cols_auto = smart_classify_columns(df_encoded)
         
-        categorical_cols = st.sidebar.multiselect("👥 المتغيرات الشخصية (للمقارنة):", df_encoded.columns, default=cat_cols_auto)
-        all_questions = [c for c in num_cols_auto if c not in categorical_cols]
+        
         
         # 👇=== التعديل الأول: رفع زر الوورد لأعلى القائمة الجانبية (VIP) ===👇
         st.sidebar.markdown("---")
