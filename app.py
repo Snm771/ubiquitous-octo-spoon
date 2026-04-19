@@ -586,6 +586,14 @@ if uploaded_file is not None:
         st.sidebar.title("⚙️ بناء هيكل الدراسة (البحث)")
         st.sidebar.success(f"تم اكتشاف {len(num_cols_auto)} سؤال استبيان بنجاح!")
         
+        # 👇=== إضافة الصندوق المطوي للمتغيرات الشخصية ===👇
+        with st.sidebar.expander("👥 المتغيرات الشخصية (للمقارنة)", expanded=False):
+            categorical_cols = st.multiselect("اختر المتغيرات:", df_encoded.columns, default=cat_cols_auto)
+        
+        # يجب تعريف هذه القائمة هنا لكي لا يحدث خطأ في الأبعاد
+        all_questions = [c for c in num_cols_auto if c not in categorical_cols]
+        # 👆=============================================👆
+
         # 🌟 الهيكل الأساسي
         base_model = {
             "المتغير المستقل": ["البعد الأول", "البعد الثاني", "البعد الثالث", "البعد الرابع", "البعد الخامس", "البعد السادس"],
