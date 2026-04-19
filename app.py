@@ -547,12 +547,12 @@ if uploaded_file is not None:
 
                         def add_plotly_fig(doc, fig):
                             try:
-                                # 👇 الحل النهائي للحفاظ على كل الألوان (أعمدة، خطوط، دوائر) 👇
+                                # 👇 الحل الأكيد: إجبار المخطط على استخدام قالب الألوان المبهج (plotly) 👇
                                 fig.update_layout(
-                                    paper_bgcolor="white",   # خلفية بيضاء للورقة
-                                    plot_bgcolor="white",    # خلفية بيضاء للرسم
-                                    font=dict(color="black") # نص أسود واضح للطباعة
-                                    # (تم حذف أمر template لكي لا يمسح ألوان الأعمدة الأصلية)
+                                    template="plotly",       # 👈 هذا السطر السحري سيعيد كل الألوان الطبيعية للأعمدة والدوائر
+                                    paper_bgcolor="white",   # خلفية الورقة بيضاء
+                                    plot_bgcolor="white",    # خلفية المخطط بيضاء
+                                    font=dict(color="black") # النص باللون الأسود للطباعة
                                 )
                                 # 👆 ======================================================= 👆
                                 
