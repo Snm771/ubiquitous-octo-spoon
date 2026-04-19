@@ -547,14 +547,14 @@ if uploaded_file is not None:
 
                         def add_plotly_fig(doc, fig):
                             try:
-                                # 👇 الخدعة السحرية: إجبار المخطط على استخدام خلفية بيضاء ونصوص سوداء للطباعة 👇
+                                # 👇 الحل النهائي للحفاظ على كل الألوان (أعمدة، خطوط، دوائر) 👇
                                 fig.update_layout(
-                                    paper_bgcolor="white",
-                                    plot_bgcolor="white",
-                                    font=dict(color="black"),
-                                    template="plotly_white" # استخدام قالب ألوان فاتح إجباري
+                                    paper_bgcolor="white",   # خلفية بيضاء للورقة
+                                    plot_bgcolor="white",    # خلفية بيضاء للرسم
+                                    font=dict(color="black") # نص أسود واضح للطباعة
+                                    # (تم حذف أمر template لكي لا يمسح ألوان الأعمدة الأصلية)
                                 )
-                                # 👆 ========================================================= 👆
+                                # 👆 ======================================================= 👆
                                 
                                 img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
                                 img_stream = io.BytesIO(img_bytes)
@@ -562,8 +562,6 @@ if uploaded_file is not None:
                                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
                             except Exception as e:
                                 add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
-                        # --- بناء المستند ---
-                        add_rtl_text(doc, 'تقرير التحليل الإحصائي (SmartStat Pro)', True, 0)
 
                         # 1️⃣ عينة الدراسة
                         add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
