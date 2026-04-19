@@ -547,14 +547,17 @@ if uploaded_file is not None:
 
                         def add_plotly_fig(doc, fig):
                             try:
-                                # 👇 الحل الأكيد: إجبار المخطط على استخدام قالب الألوان المبهج (plotly) 👇
+                                # 👇 الحل القاطع: إعطاء الكاميرا قائمة ألوان زاهية صريحة لمنع الأسود 👇
                                 fig.update_layout(
-                                    template="plotly",       # 👈 هذا السطر السحري سيعيد كل الألوان الطبيعية للأعمدة والدوائر
-                                    paper_bgcolor="white",   # خلفية الورقة بيضاء
-                                    plot_bgcolor="white",    # خلفية المخطط بيضاء
-                                    font=dict(color="black") # النص باللون الأسود للطباعة
+                                    template="plotly_white",
+                                    colorway=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf'], # ألوان حقيقية إجبارية
+                                    paper_bgcolor="white",
+                                    plot_bgcolor="white",
+                                    font=dict(color="black")
                                 )
-                                # 👆 ======================================================= 👆
+                                # إزالة أي حدود سوداء محيطة بالأعمدة
+                                fig.update_traces(marker_line_width=0, selector=dict(type='bar'))
+                                # 👆 ========================================================= 👆
                                 
                                 img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
                                 img_stream = io.BytesIO(img_bytes)
