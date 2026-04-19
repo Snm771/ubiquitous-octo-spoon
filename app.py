@@ -649,6 +649,11 @@ if uploaded_file is not None:
             with tab1:
                 st.subheader("👥 وصف عينة الدراسة (التكرارات والنسب)")
                 if categorical_cols:
+                    # تهيئة الذواكر المطلوبة لهذا التبويب لملف الوورد وعدم اختفاء النصوص
+                    if 'sample_dfs' not in st.session_state: st.session_state['sample_dfs'] = {}
+                    if 'sample_figs' not in st.session_state: st.session_state['sample_figs'] = {}
+                    if 'demo_ai_explanations' not in st.session_state: st.session_state['demo_ai_explanations'] = {}
+
                     for col in categorical_cols:
                         st.markdown(f"### 📊 توزيع أفراد العينة حسب: ({col})")
                         
@@ -679,38 +684,35 @@ if uploaded_file is not None:
                             else:
                                 fig = px.bar(demo_df, x='التكرار', y=demo_df.index, text='التكرار', color=demo_df.index, orientation='h', height=350)
                             
-                            # 👇=== التعديل السحري لترتيب مفتاح الرسم (Legend) ومنع قص النص ===👇
+                            # التعديل السحري لترتيب مفتاح الرسم
                             fig.update_layout(
-                                legend=dict(
-                                    orientation="h",
-                                    yanchor="top",
-                                    y=-0.1,
-                                    xanchor="center",
-                                    x=0.5
-                                ),
+                                legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
                                 margin=dict(l=10, r=10, t=30, b=10)
                             )
-                            # 👆=====================================================👆
-
                             st.plotly_chart(fig, use_container_width=True)
                             
-                        # حفظ الرسم البياني للعينة في الذاكرة لملف الوورد
-                            if 'sample_figs' not in st.session_state:
-                                st.session_state['sample_figs'] = {}
-                            st.session_state['sample_figs'][col] = fig
-                            
-                        st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
+                        # 👇=== كود حفظ الجداول والرسومات للوورد ===👇
+                        st.session_state['sample_dfs'][col] = demo_df_with_total
+                        st.session_state['sample_figs'][col] = fig
                         
-                        # 👇=== كود الحفظ بصمت ===👇
                         res_txt = f"يتضح أن الفئة الأعلى في متغير ({col}) هي ({counts.idxmax()}) بنسبة ({percentages.max():.1f}%)."
                         if res_txt not in st.session_state['sample_results']:
                             st.session_state['sample_results'].append(res_txt)
                         # 👆==============================👆
+
+                        st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
                         
+                        # 👇=== زر الذكاء الاصطناعي (مع الذاكرة الدائمة) ===👇
                         if api_key:
                             if st.button(f"✨ توليد قراءة ذكية متعمقة لجدول ({col})", key=f"ai_demo_{col}"):
                                 with st.spinner("جاري صياغة التفسير الأكاديمي..."):
-                                    st.success(get_table_explanation(demo_df_with_total.to_markdown(), f"توزيع العينة حسب {col}", api_key))
+                                    ai_text = get_table_explanation(demo_df_with_total.to_markdown(), f"توزيع العينة حسب {col}", api_key)
+                                    # حفظ النص في الذاكرة
+                                    st.session_state['demo_ai_explanations'][col] = ai_text
+                            
+                            # العرض الدائم من الذاكرة (حتى لا يختفي عند ضغط أزرار أخرى)
+                            if col in st.session_state['demo_ai_explanations']:
+                                st.success(st.session_state['demo_ai_explanations'][col])
                         st.markdown("---")
 
             # ==========================================
