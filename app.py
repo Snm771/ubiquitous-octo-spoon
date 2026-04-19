@@ -506,7 +506,7 @@ if uploaded_file is not None:
         else:
         
             # ==========================================
-            # 📥 ميزة التصدير الشامل لملف Word (نصوص + جداول + مخططات)
+            # 📥 ميزة التصدير الشامل لملف Word (النسخة الملكية الكاملة)
             # ==========================================
             st.sidebar.markdown("---")
             st.sidebar.subheader("📥 استخراج التقرير النهائي")
@@ -522,110 +522,111 @@ if uploaded_file is not None:
 
                         doc = Document()
                         
-                        # 🔹 دالة مساعدة 1: تنظيف النصوص والمحاذاة لليمين (للعربي)
+                        # 🔹 دوال المساعدة للوورد
                         def add_rtl_text(doc, text, is_heading=False, level=1):
-                            # تنظيف رموز الماركدوان المزعجة (النجمات والهاشتاقات)
                             clean_text = re.sub(r'\*+', '', text)
                             clean_text = clean_text.replace('#', '').strip()
                             if not clean_text: return
-                            
-                            if is_heading:
-                                p = doc.add_heading(clean_text, level=level)
-                            else:
-                                p = doc.add_paragraph(clean_text)
-                            
-                            # محاذاة النص لليمين ليناسب اللغة العربية
+                            p = doc.add_heading(clean_text, level=level) if is_heading else doc.add_paragraph(clean_text)
                             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-                        # 🔹 دالة مساعدة 2: رسم جداول احترافية داخل الوورد
                         def add_dataframe_table(doc, df):
                             table = doc.add_table(rows=df.shape[0]+1, cols=df.shape[1])
                             table.style = 'Table Grid'
-                            
-                            # تعبئة عناوين الأعمدة
                             for j, col in enumerate(df.columns):
                                 cell = table.cell(0, j)
                                 cell.text = str(col)
                                 cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                                
-                            # تعبئة البيانات
                             for i in range(df.shape[0]):
                                 for j in range(df.shape[1]):
                                     val = df.iat[i, j]
                                     cell = table.cell(i+1, j)
-                                    # تقريب الأرقام لـ 3 فواصل عشرية فقط للمظهر الأكاديمي
                                     cell.text = f"{val:.3f}" if isinstance(val, float) else str(val)
                                     cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            
-                            doc.add_paragraph("") # مسافة صغيرة بعد الجدول لترتيب الصفحة
+                            doc.add_paragraph("")
 
-                        # --- بداية كتابة المستند ---
+                        def add_plotly_fig(doc, fig):
+                            try:
+                                img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
+                                img_stream = io.BytesIO(img_bytes)
+                                doc.add_picture(img_stream, width=Inches(5.5))
+                                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            except Exception as e:
+                                add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
+
+                        # --- بناء المستند ---
                         add_rtl_text(doc, 'تقرير التحليل الإحصائي (SmartStat Pro)', True, 0)
 
-                        # 1. عينة الدراسة
+                        # 1️⃣ عينة الدراسة
                         add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
-                        if st.session_state.get('sample_results'):
-                            for res in st.session_state['sample_results']:
-                                add_rtl_text(doc, res)
+                        if 'sample_dfs' in st.session_state:
+                            for col_name, df_data in st.session_state['sample_dfs'].items():
+                                add_rtl_text(doc, f"جدول وتوزيع العينة حسب ({col_name}):", True, 2)
+                                # الجدول
+                                df_print = df_data.copy()
+                                df_print.insert(0, 'الفئة', df_print.index)
+                                add_dataframe_table(doc, df_print)
+                                # المخطط البياني للعينة
+                                if 'sample_figs' in st.session_state and col_name in st.session_state['sample_figs']:
+                                    add_plotly_fig(doc, st.session_state['sample_figs'][col_name])
+                                # الشرح النصي الخاص بالمتغير
+                                for res in st.session_state.get('sample_results', []):
+                                    if f"({col_name})" in res:
+                                        add_rtl_text(doc, res)
                         else:
-                            add_rtl_text(doc, "لم يتم تحليل عينة الدراسة بعد.")
+                            add_rtl_text(doc, "يرجى زيارة تبويب عينة الدراسة أولاً.")
 
-                        # 2. الثبات
-                        add_rtl_text(doc, 'ثانياً: ثبات أداة الدراسة', True, 1)
+                        # 2️⃣ الإحصاء الوصفي (الجديد)
+                        add_rtl_text(doc, 'ثانياً: الإحصاء الوصفي لمتغيرات الدراسة', True, 1)
+                        if 'desc_df_memory' in st.session_state:
+                            add_rtl_text(doc, "جدول المتوسطات والانحرافات المعيارية:")
+                            add_dataframe_table(doc, st.session_state['desc_df_memory'])
+                            add_rtl_text(doc, "يوضح الجدول أعلاه الاتجاه العام لإجابات المبحوثين وتشتتها حول المتوسط.")
+                        else:
+                            add_rtl_text(doc, "يرجى زيارة تبويب الإحصاء الوصفي أولاً.")
+
+                        # 3️⃣ الثبات
+                        add_rtl_text(doc, 'ثالثاً: ثبات أداة الدراسة', True, 1)
+                        if 'alpha_df_memory' in st.session_state:
+                            add_dataframe_table(doc, st.session_state['alpha_df_memory'])
                         if st.session_state.get('reliability_result'):
                             add_rtl_text(doc, st.session_state['reliability_result'])
                         else:
-                            add_rtl_text(doc, "لم يتم حساب الثبات بعد.")
+                            add_rtl_text(doc, "يرجى زيارة تبويب الثبات أولاً.")
 
-                        # 3. الفرضيات، الجداول، والمخططات
-                        add_rtl_text(doc, 'ثالثاً: نتائج اختبار الفرضيات', True, 1)
+                        # 4️⃣ الفرضيات
+                        add_rtl_text(doc, 'رابعاً: نتائج اختبار الفرضيات', True, 1)
                         if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
                             for idx, out in st.session_state['hypo_outputs'].items():
                                 add_rtl_text(doc, f'الفرضية رقم ({idx})', True, 2)
-                                
-                                # أ. إدراج الجدول الإحصائي
                                 add_rtl_text(doc, "الجدول الإحصائي للنتيجة:")
                                 add_dataframe_table(doc, out['df'])
-                                
-                                # ب. القرار والشرح الأكاديمي
+                                add_plotly_fig(doc, out['fig'])
                                 add_rtl_text(doc, f"القرار الإحصائي: {out['decision_text']}")
-                                
-                                # تقسيم الشرح المعمق إلى فقرات ليكون مرتباً
-                                explanation_lines = out['ai_explanation'].split('\n')
-                                for line in explanation_lines:
+                                for line in out['ai_explanation'].split('\n'):
                                     add_rtl_text(doc, line)
-                                
-                                # ج. إدراج المخطط البياني كصورة
-                                try:
-                                    img_bytes = out['fig'].to_image(format="png")
-                                    img_stream = io.BytesIO(img_bytes)
-                                    doc.add_picture(img_stream, width=Inches(5.5))
-                                    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER # توسيط الصورة
-                                except Exception as e:
-                                    add_rtl_text(doc, "[تعذر إدراج المخطط البياني. تأكد من تثبيت مكتبة kaleido]")
                         else:
-                            add_rtl_text(doc, "لم يتم تنفيذ اختبار الفرضيات بعد.")
+                            add_rtl_text(doc, "لم يتم اختبار أي فرضية بعد.")
 
-                        # 4. التوصيات
-                        add_rtl_text(doc, 'رابعاً: التوصيات', True, 1)
+                        # 5️⃣ التوصيات
+                        add_rtl_text(doc, 'خامساً: التوصيات والإجراءات المقترحة', True, 1)
                         if st.session_state.get('dim_recs'):
                             for idx, rec in enumerate(st.session_state['dim_recs'], 1):
-                                add_rtl_text(doc, f"{idx}. {rec['rec']}")
+                                add_rtl_text(doc, f"{idx}. التوصية: {rec['rec']}")
                                 if 'ai_recs_explanations' in st.session_state and f"rec_{idx}" in st.session_state['ai_recs_explanations']:
-                                    expl_lines = st.session_state['ai_recs_explanations'][f"rec_{idx}"].split('\n')
-                                    for line in expl_lines:
+                                    for line in st.session_state['ai_recs_explanations'][f"rec_{idx}"].split('\n'):
                                         add_rtl_text(doc, line)
 
-                        # حفظ وتحميل الملف
+                        # الحفظ والتصدير
                         target_stream = io.BytesIO()
                         doc.save(target_stream)
                         target_stream.seek(0)
 
-                        st.sidebar.success("✅ تم تجهيز التقرير الأكاديمي!")
+                        st.sidebar.success("✅ تم تجهيز التقرير الملكي بنجاح!")
                         st.sidebar.download_button(
-                            label="⬇️ تحميل تقرير (Word) الأكاديمي",
+                            label="⬇️ تحميل تقرير (Word) الأكاديمي الشامل",
                             data=target_stream,
-                            file_name="Master_Thesis_Statistical_Report.docx",
+                            file_name="Master_Thesis_Full_Report.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         )
                     except Exception as e:
@@ -692,7 +693,12 @@ if uploaded_file is not None:
                             # 👆=====================================================👆
 
                             st.plotly_chart(fig, use_container_width=True)
-                        
+                            
+                        # حفظ الرسم البياني للعينة في الذاكرة لملف الوورد
+                            if 'sample_figs' not in st.session_state:
+                                st.session_state['sample_figs'] = {}
+                            st.session_state['sample_figs'][col] = fig
+                            
                         st.info(f"**📝 التفسير الأكاديمي:**\n يوضح العرض الإحصائي أعلاه التوزيع التكراري والنسبي لأفراد عينة الدراسة البالغ عددهم الإجمالي ({len(df_encoded)}) مبحوثاً، وذلك وفقاً لتصنيفاتهم في متغير ({col}). من خلال استقراء النتائج، يتبين بوضوح أن الفئة الأكثر تمثيلاً وحضوراً في العينة هي فئة ({counts.idxmax()}) بنسبة مئوية قدرها ({percentages.max():.1f}%)، مما يعكس هيمنة هذه الشريحة على تركيبة العينة في هذا المتغير.")
                         
                         # 👇=== كود الحفظ بصمت ===👇
@@ -716,7 +722,9 @@ if uploaded_file is not None:
                 desc_df = df_encoded[analysis_cols].describe().T
                 desc_df = desc_df.rename(columns={'count': 'العدد', 'mean': 'المتوسط', 'std': 'الانحراف المعياري', 'min': 'الأدنى', 'max': 'الأقصى'})
                 st.dataframe(desc_df[['العدد', 'المتوسط', 'الانحراف المعياري', 'الأدنى', 'الأقصى']], use_container_width=True)
-                
+                # حفظ جدول الثبات في الذاكرة لملف الوورد
+                    st.session_state['alpha_df_memory'] = df_res
+                    
                 if api_key:
                     if st.button("✨ توليد قراءة ذكية لجدول المحاور", key="ai_desc"):
                         with st.spinner("جاري التحليل..."):
@@ -731,7 +739,7 @@ if uploaded_file is not None:
                 st.markdown("### 📝 التفسير الأكاديمي:")
                 st.info("يهدف التحليل الوصفي المعروض في الجداول أعلاه إلى تشخيص مستوى الاستجابة لمتغيرات ومحاور الدراسة وفقاً لآراء أفراد العينة. بالاعتماد على مقياس النزعة المركزية المتمثل في **المتوسط الحسابي (Mean)**، يتم تحديد الاتجاه العام والميل الغالب لإجابات المبحوثين، حيث تشير القيم المرتفعة إلى تبلور رأي إيجابي، أو مستوى موافقة عالٍ. وبالتوازي مع ذلك، يبرز دور مقياس التشتت المتمثل في **الانحراف المعياري (Standard Deviation)** كمؤشر إحصائي دقيق لقياس مدى تشتت أو تقارب تلك الآراء حول متوسطها.")
 
-      # ==========================================
+            # ==========================================
             # 3. الثبات (مطور بدعم التجزئة النصفية وسبيرمان براون)
             # ==========================================
             with tab3:
@@ -853,7 +861,7 @@ if uploaded_file is not None:
 وقد تم الاعتماد على مقاييس الثبات المتقدمة لتأكيد قوة الأداة، حيث يُثبت رياضياً مدى تجانس فقرات الاستبيان وترابطها البنيوي؛ بمعنى أن إجابات المبحوثين كانت متسقة ولم تتسم بالعشوائية أو التناقض. وتعطي هذه النتائج دلالة علمية قاطعة على صلاحية أداة الدراسة، وتمنح الباحث الموثوقية اللازمة للمضي قدماً في الاعتماد على هذه البيانات لاختبار الفرضيات.
 """)
            
-# ==========================================
+            # ==========================================
             # 4. التبويب السابع: المحلل الذكي الهجين (النسخة الفائقة V3.5 - المتغيرات المتعددة الشاملة)
             # ==========================================
             with tab4:
