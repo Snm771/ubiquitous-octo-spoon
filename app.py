@@ -547,13 +547,21 @@ if uploaded_file is not None:
 
                         def add_plotly_fig(doc, fig):
                             try:
+                                # 👇 الخدعة السحرية: إجبار المخطط على استخدام خلفية بيضاء ونصوص سوداء للطباعة 👇
+                                fig.update_layout(
+                                    paper_bgcolor="white",
+                                    plot_bgcolor="white",
+                                    font=dict(color="black"),
+                                    template="plotly_white" # استخدام قالب ألوان فاتح إجباري
+                                )
+                                # 👆 ========================================================= 👆
+                                
                                 img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
                                 img_stream = io.BytesIO(img_bytes)
                                 doc.add_picture(img_stream, width=Inches(5.5))
                                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
                             except Exception as e:
                                 add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
-
                         # --- بناء المستند ---
                         add_rtl_text(doc, 'تقرير التحليل الإحصائي (SmartStat Pro)', True, 0)
 
@@ -594,7 +602,7 @@ if uploaded_file is not None:
                         else:
                             add_rtl_text(doc, "يرجى زيارة تبويب الثبات أولاً.")
 
-                        # 4️⃣ الفرضيات
+                        # 4️⃣ الفرضيات (التفاصيل والمخططات)
                         add_rtl_text(doc, 'رابعاً: نتائج اختبار الفرضيات', True, 1)
                         if 'hypo_outputs' in st.session_state and st.session_state['hypo_outputs']:
                             for idx, out in st.session_state['hypo_outputs'].items():
@@ -608,8 +616,52 @@ if uploaded_file is not None:
                         else:
                             add_rtl_text(doc, "لم يتم اختبار أي فرضية بعد.")
 
-                        # 5️⃣ التوصيات
-                        add_rtl_text(doc, 'خامساً: التوصيات والإجراءات المقترحة', True, 1)
+                        # ==========================================
+                        # 5️⃣ أبرز النتائج (الجديد - يسحب بيانات التبويب الخامس)
+                        # ==========================================
+                        add_rtl_text(doc, 'خامساً: أبرز نتائج الدراسة', True, 1)
+                        add_rtl_text(doc, "من خلال المعطيات السابقة وردود المبحوثين على محاور الدراسة تم الخروج بالنتائج التالية:")
+                        
+                        # أ. نتيجة الثبات
+                        if st.session_state.get('reliability_result'):
+                            add_rtl_text(doc, st.session_state['reliability_result'])
+                            
+                        # ب. نتيجة العينة
+                        if 'sample_dfs' in st.session_state and st.session_state['sample_dfs']:
+                            summary_parts = []
+                            for col_name, df_data in st.session_state['sample_dfs'].items():
+                                if 'التكرار' in df_data.columns:
+                                    top = df_data['التكرار'].drop('📊 المجموع الكلي ✓', errors='ignore').idxmax()
+                                    summary_parts.append(f"{col_name} ({top})")
+                            if summary_parts:
+                                joined = "، ".join(summary_parts)
+                                add_rtl_text(doc, f" استنادًا إلى نتائج البيانات الشخصية للمبحوثين اتضح أن غالبية أفراد العينة تتمثل في: {joined}، مما يعكس خصائص مجتمع الدراسة ويسهم في دعم دقة تفسير النتائج.")
+                                
+                        # ج. نتائج الفرضيات المختصرة
+                        if st.session_state.get('hypothesis_history'):
+                            res_idx = 1
+                            for h in st.session_state['hypothesis_history']:
+                                is_accepted = h['result'] == "accepted"
+                                decision = "تقبل" if is_accepted else "ترفض"
+                                relation = "وجود أثر أو علاقة ذات دلالة إحصائية" if is_accepted else "عدم وجود أثر أو علاقة ذات دلالة إحصائية"
+                                proof = "ثبت معنوياً وإحصائياً" if is_accepted else "لم يثبت إحصائياً"
+                                
+                                add_rtl_text(doc, f" الفرضية ({res_idx}): ({h['text']})")
+                                add_rtl_text(doc, f"تشير نتائج التحليل الإحصائي إلى {relation} بين المتغيرات. وبناءً على ذلك، فإن الفرضية المذكورة ({decision}).")
+                                
+                                # إضافة التفسير المعمق إن وُجد
+                                if 'deep_explanations' in st.session_state and f"hypo_{res_idx}" in st.session_state['deep_explanations']:
+                                    for line in st.session_state['deep_explanations'][f"hypo_{res_idx}"].split('\n'):
+                                        add_rtl_text(doc, line)
+                                else:
+                                    add_rtl_text(doc, f"ويعكس هذا المسار {'توافقاً' if is_accepted else 'اختلافاً'} مع الإطار النظري المفترض للدراسة.")
+                                    
+                                res_idx += 1
+
+                        # ==========================================
+                        # 6️⃣ التوصيات (أصبحت القسم السادس)
+                        # ==========================================
+                        add_rtl_text(doc, 'سادساً: التوصيات والإجراءات المقترحة', True, 1)
                         if st.session_state.get('dim_recs'):
                             for idx, rec in enumerate(st.session_state['dim_recs'], 1):
                                 add_rtl_text(doc, f"{idx}. التوصية: {rec['rec']}")
