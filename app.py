@@ -547,25 +547,28 @@ if uploaded_file is not None:
 
                         def add_plotly_fig(doc, fig):
                             try:
-                                # 👇 الحل القاطع: إعطاء الكاميرا قائمة ألوان زاهية صريحة لمنع الأسود 👇
+                                # 1. تنظيف الخلفية وجعلها بيضاء ناصعة
                                 fig.update_layout(
                                     template="plotly_white",
-                                    colorway=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf'], # ألوان حقيقية إجبارية
                                     paper_bgcolor="white",
                                     plot_bgcolor="white",
                                     font=dict(color="black")
                                 )
-                                # إزالة أي حدود سوداء محيطة بالأعمدة
-                                fig.update_traces(marker_line_width=0, selector=dict(type='bar'))
-                                # 👆 ========================================================= 👆
                                 
+                                # 2. الحل الجذري: صبغ الأعمدة بالقوة الجبرية بألوان زاهية
+                                colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf']
+                                for i, trace in enumerate(fig.data):
+                                    if trace.type == 'bar':
+                                        trace.marker.color = colors[i % len(colors)] # إعطاء كل عمود لون مختلف
+                                        trace.marker.line.width = 0 # مسح أي إطار أسود
+                                
+                                # 3. التقاط الصورة وإدراجها
                                 img_bytes = fig.to_image(format="png", width=800, height=500, scale=2)
                                 img_stream = io.BytesIO(img_bytes)
                                 doc.add_picture(img_stream, width=Inches(5.5))
                                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
                             except Exception as e:
                                 add_rtl_text(doc, "[تعذر إدراج المخطط - تأكد من توفر مكتبة kaleido]")
-
                         # 1️⃣ عينة الدراسة
                         add_rtl_text(doc, 'أولاً: وصف عينة الدراسة', True, 1)
                         if 'sample_dfs' in st.session_state:
